@@ -19,16 +19,19 @@ cp .env.example .env     # completar con tus datos de PostgreSQL
 
 ### Base de datos
 
-**Opción A — PostgreSQL instalado:**
+La base del grupo está en **[Neon](https://neon.tech)** (PostgreSQL en la nube), así que todos usamos
+la misma, con la tabla `empresas` ya creada. Los datos de conexión (`DB_HOST`, `DB_PASSWORD`, etc.)
+se pasan **por privado**: completalos en tu `.env` con `DB_SSL=true`. Nunca los subas al repo.
+
+**Base local (opcional, para hacer pruebas sin tocar la compartida):** poné `DB_HOST=localhost` y
+`DB_SSL=false` en el `.env`, y creá la base con alguna de estas opciones:
 
 ```bash
+# Postgres instalado
 createdb -U postgres eventos
 psql -U postgres -d eventos -f database/empresas.sql
-```
 
-**Opción B — Docker:** crea la base y la tabla automáticamente con los datos del `.env`.
-
-```bash
+# o con Docker (crea la base y la tabla automáticamente)
 docker compose up -d
 ```
 
