@@ -1,0 +1,18 @@
+# Opcional: levanta PostgreSQL con la tabla empresas ya creada.
+# Uso: docker compose up -d   (usa los valores de tu .env)
+services:
+  postgres:
+    image: postgres:17
+    container_name: intermaterias-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-eventos}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - ./database/empresas.sql:/docker-entrypoint-initdb.d/01-empresas.sql:ro
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
