@@ -35,6 +35,11 @@ psql -U postgres -d eventos -f database/empresas.sql
 docker compose up -d
 ```
 
+### CORS
+
+La API solo acepta peticiones del navegador que vengan de la URL del front, configurada en
+`FRONTEND_URL` (por defecto `http://localhost:5173`). Si el front corre en otro puerto, cambialo en el `.env`.
+
 ## Ejecutar
 
 ```bash
