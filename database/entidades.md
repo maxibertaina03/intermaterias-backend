@@ -135,7 +135,7 @@ estado. Así "consultar eventos por fecha o estado" es una sola consulta.
 | cantidad_estimada | INT | CHECK (cantidad_estimada > 0) | Dato general (alcance) |
 | necesidades | TEXT | | Necesidades y preferencias |
 | estado | VARCHAR(20) | NOT NULL, DEFAULT 'solicitado', CHECK (estado IN ('solicitado', 'en_negociacion', 'confirmado', 'en_preparacion', 'realizado', 'cancelado')) | **H**: los estados reales salen del relevamiento |
-| motivo_cancelacion | TEXT | | Obligatorio si está cancelado (validar en la API) |
+| motivo_cancelacion | TEXT | CHECK: obligatorio si estado = 'cancelado' | Se conserva el motivo de la cancelación |
 | observaciones_cierre | TEXT | | Cierre operativo básico |
 | fecha_creacion | TIMESTAMP | DEFAULT NOW() | |
 
