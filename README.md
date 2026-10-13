@@ -103,6 +103,8 @@ Así, cuando agreguemos **MongoDB**, solo hay que crear `src/models/mongo/empres
 funciones (`getAll`, `getById`, `create`, `update`, `remove`), registrarlo en `src/models/index.js`
 y poner `DB_CLIENT=mongo` en el `.env`. Rutas y controllers no cambian.
 
+##Link de diagrama: https://dbdiagram.io/d/6acea6dbe308025ea5e70018
+
 ## Trabajo en grupo
 
 Ver [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de ramas (`masita` / `facu` / `tomi` / `lucas` → `develop` → `main`).
