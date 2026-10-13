@@ -105,6 +105,28 @@ y poner `DB_CLIENT=mongo` en el `.env`. Rutas y controllers no cambian.
 
 ##Link de diagrama: https://dbdiagram.io/d/6acea6dbe308025ea5e70018
 
+## Docker
+
+Construir la imagen:
+
+```bash
+docker build -t intermaterias-api .
+```
+
+Correr el contenedor (necesita un archivo `.env` local con las variables de entorno):
+
+```bash
+docker run --rm -p 3000:3000 --env-file .env intermaterias-api
+```
+
+Probar:
+
+```bash
+curl -i localhost:3000/api/instancia
+```
+
+Devuelve `{ "instancia": "<id-del-contenedor>" }` y el header `X-Instancia`.
+
 ## Trabajo en grupo
 
 Ver [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de ramas (`masita` / `facu` / `tomi` / `lucas` → `develop` → `main`).
