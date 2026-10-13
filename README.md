@@ -3,6 +3,12 @@
 API del sistema de eventos (multitenant) hecha con **Node.js + Express + PostgreSQL**.
 Por ahora tiene el CRUD de `empresas`.
 
+**Dominio:** gestión de eventos de un **centro de estudiantes** (por ejemplo, la fiesta de
+bienvenida): solicitud, propuesta, confirmación, proveedores, tareas y cierre. La base es
+**multitenant**: cada centro de estudiantes es una fila de `empresas`.
+Explicación completa del dominio: [00-dominio.md](https://github.com/maxibertaina03/intermaterias-infra/blob/develop/docs/si/00-dominio.md).
+Tablas de la base: [database/entidades.md](database/entidades.md).
+
 ## Requisitos
 
 - Node.js 20 o superior
