@@ -136,3 +136,9 @@ Ver [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de ramas (`masita` / `facu`
 ```bash
 gh api -X PUT repos/maxibertaina03/intermaterias-backend/collaborators/USUARIO_GITHUB -f permission=push
 ```
+## Documentar en infra
+
+Conseguir la MONGO_URI (pedirla por privado).
+Setear DB_CLIENT=mongo y MONGO_URI=... como variables de entorno en cada réplica.
+Asegurarse de que la IP de cada réplica esté permitida en Atlas → Network Access.
+Levantar las réplicas como siempre.

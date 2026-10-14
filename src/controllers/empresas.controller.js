@@ -8,6 +8,7 @@ export const obtenerEmpresas = async (req, res) => {
     const empresas = await Empresas.getAll();
     res.json(empresas);
   } catch (error) {
+    console.error(error); // <- agregar esta línea
     res.status(500).json({ mensaje: "Error al obtener las empresas" });
   }
 };
