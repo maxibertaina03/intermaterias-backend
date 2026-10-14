@@ -14,7 +14,7 @@ export async function getDb() {
   await client.connect();
   db = client.db();
 
-  // Índice único para que el duplicado dispare el error 11000
-  await db.collection('empresas').createIndex({ nombre: 1 }, { unique: true });
+  // Índice único en cuit: un duplicado dispara el error 11000
+  await db.collection('empresas').createIndex({ cuit: 1 }, { unique: true });
   return db;
 }
