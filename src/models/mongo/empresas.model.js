@@ -3,7 +3,7 @@ import { getDb } from '../../data/mongo.js';
 const NO_ID = { projection: { _id: 0 } };
 
 function duplicado() {
-  const e = new Error('DUPLICADO');
+  const e = new Error('Ya existe una empresa con ese CUIT');
   e.code = 'DUPLICADO';
   return e;
 }
