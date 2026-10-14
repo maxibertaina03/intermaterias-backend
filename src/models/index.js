@@ -2,12 +2,13 @@
 // Todas las implementaciones exponen las mismas funciones:
 // getAll, getById, create, update, remove
 import * as empresasPostgres from "./postgres/empresas.model.js";
+import * as empresasMongo from './mongo/empresas.model.js';
 
 const cliente = process.env.DB_CLIENT || "postgres";
 
 const modelos = {
-  postgres: { empresas: empresasPostgres }
-  // mongo: { empresas: empresasMongo }  → cuando se implemente MongoDB
+  postgres: { empresas: empresasPostgres },
+  mongo: { empresas: empresasMongo },
 };
 
 if (!modelos[cliente]) {
