@@ -128,6 +128,10 @@ curl -i localhost:3000/api/instancia
 
 Devuelve `{ "instancia": "<id-del-contenedor>" }` y el header `X-Instancia`.
 
+## Estructura para programar
+
+Antes de agregar endpoints leé **[ESTRUCTURA.md](ESTRUCTURA.md)**: capas, multitenant con `req.usuario`, convenciones y **los endpoints de cada área**.
+
 ## Trabajo en grupo
 
 Ver [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de ramas (`masita` / `facu` / `tomi` / `lucas` → `develop` → `main`).
