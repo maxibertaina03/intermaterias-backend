@@ -8,8 +8,8 @@ export const getAll = async (id_empresa) => {
               s.nombre AS nombre_servicio, p.nombre AS nombre_proveedor
          FROM evento_servicios es
          JOIN eventos e ON e.id_evento = es.id_evento
-         JOIN servicios s ON s.id_servicio = es.id_servicio
-         LEFT JOIN proveedores p ON p.id_proveedor = es.id_proveedor
+         JOIN servicios s ON s.id_servicio = es.id_servicio AND s.id_empresa = $1
+         LEFT JOIN proveedores p ON p.id_proveedor = es.id_proveedor AND p.id_empresa = $1
         WHERE e.id_empresa = $1 AND es.estado = 'pendiente'
         ORDER BY e.fecha, e.nombre, s.nombre`,
       [id_empresa]
@@ -33,11 +33,12 @@ export const getAll = async (id_empresa) => {
               p.fecha_presentacion + p.vigencia_dias * INTERVAL '1 day' AS fecha_vencimiento,
               e.id_evento, e.nombre AS nombre_evento, e.fecha AS fecha_evento,
               c.nombre AS nombre_cliente,
-              COALESCE(SUM(i.cantidad * i.precio_unitario), 0) - p.descuento AS total
+              COALESCE(SUM(i.cantidad * i.precio_unitario) FILTER (WHERE s.id_servicio IS NOT NULL), 0) - p.descuento AS total
          FROM propuestas p
          JOIN eventos e ON e.id_evento = p.id_evento AND e.id_empresa = p.id_empresa
          JOIN clientes c ON c.id_cliente = e.id_cliente
          LEFT JOIN propuesta_items i ON i.id_propuesta = p.id_propuesta
+         LEFT JOIN servicios s ON s.id_servicio = i.id_servicio AND s.id_empresa = p.id_empresa
         WHERE p.id_empresa = $1 AND p.estado = 'presentada'
           AND p.fecha_presentacion + p.vigencia_dias * INTERVAL '1 day'
               BETWEEN NOW() AND NOW() + INTERVAL '7 days'

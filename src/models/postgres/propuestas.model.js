@@ -6,22 +6,25 @@ const detallePropuesta = `
          e.fecha AS fecha_evento,
          e.estado AS estado_evento,
          c.nombre AS nombre_cliente,
-         COALESCE(SUM(i.cantidad * i.precio_unitario), 0) AS subtotal,
-         COALESCE(SUM(i.cantidad * i.precio_unitario), 0) - p.descuento AS total
+         p.fecha_presentacion + p.vigencia_dias * INTERVAL '1 day' AS fecha_vencimiento,
+         COALESCE(SUM(i.cantidad * i.precio_unitario) FILTER (WHERE s.id_servicio IS NOT NULL), 0) AS subtotal,
+         COALESCE(SUM(i.cantidad * i.precio_unitario) FILTER (WHERE s.id_servicio IS NOT NULL), 0) - p.descuento AS total
     FROM propuestas p
     JOIN eventos e ON e.id_evento = p.id_evento AND e.id_empresa = p.id_empresa
     JOIN clientes c ON c.id_cliente = e.id_cliente
     LEFT JOIN propuesta_items i ON i.id_propuesta = p.id_propuesta
+    LEFT JOIN servicios s ON s.id_servicio = i.id_servicio AND s.id_empresa = p.id_empresa
 `;
 
-const seleccionarItems = async (query, id_propuesta) => {
-  const { rows } = await query(
+const seleccionarItems = async (id_empresa, id_propuesta) => {
+  const { rows } = await pool.query(
     `SELECT i.*, s.nombre AS nombre_servicio
        FROM propuesta_items i
-       JOIN servicios s ON s.id_servicio = i.id_servicio
-      WHERE i.id_propuesta = $1
+       JOIN propuestas p ON p.id_propuesta = i.id_propuesta
+       JOIN servicios s ON s.id_servicio = i.id_servicio AND s.id_empresa = p.id_empresa
+      WHERE i.id_propuesta = $1 AND p.id_empresa = $2
       ORDER BY i.id_item`,
-    [id_propuesta]
+    [id_propuesta, id_empresa]
   );
   return rows;
 };
@@ -44,7 +47,7 @@ export const getAll = async (id_empresa, estado) => {
     `${detallePropuesta}
       WHERE p.id_empresa = $1
         AND ($2::text IS NULL OR p.estado = $2)
-      GROUP BY p.id_propuesta, e.nombre, e.fecha, e.estado, c.nombre
+      GROUP BY p.id_propuesta, e.nombre, e.fecha, e.estado, c.nombre, p.fecha_presentacion, p.vigencia_dias
       ORDER BY e.fecha, p.id_propuesta`,
     [id_empresa, estado ?? null]
   );
@@ -56,11 +59,19 @@ export const getByEvent = async (id_empresa, id_evento) => {
   const { rows } = await pool.query(
     `${detallePropuesta}
       WHERE p.id_empresa = $1 AND p.id_evento = $2
-      GROUP BY p.id_propuesta, e.nombre, e.fecha, e.estado, c.nombre`,
+      GROUP BY p.id_propuesta, e.nombre, e.fecha, e.estado, c.nombre, p.fecha_presentacion, p.vigencia_dias`,
     [id_empresa, id_evento]
   );
   if (!rows[0]) return null;
-  return { ...rows[0], items: await seleccionarItems(pool.query.bind(pool), rows[0].id_propuesta) };
+  return { ...rows[0], items: await seleccionarItems(id_empresa, rows[0].id_propuesta) };
+};
+
+export const getById = async (id_empresa, id_propuesta) => {
+  const { rows } = await pool.query(
+    "SELECT estado FROM propuestas WHERE id_propuesta = $1 AND id_empresa = $2",
+    [id_propuesta, id_empresa]
+  );
+  return rows[0] ?? null;
 };
 
 export const getEvent = async (id_empresa, id_evento) => {

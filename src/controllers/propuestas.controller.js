@@ -2,7 +2,8 @@ import * as Propuestas from "../models/postgres/propuestas.model.js";
 import { idValido, responderError } from "../lib/errores.js";
 
 const enteroPositivo = (valor) => Number.isInteger(Number(valor)) && Number(valor) > 0;
-const montoValido = (valor) => Number.isFinite(Number(valor)) && Number(valor) >= 0;
+const MONTO_MAXIMO = 9999999999.99;
+const montoValido = (valor) => Number.isFinite(Number(valor)) && Number(valor) >= 0 && Number(valor) <= MONTO_MAXIMO;
 
 const responderEstadoPropuesta = (res, resultado) => {
   const mensajes = {
@@ -72,7 +73,12 @@ export const actualizar = async (req, res) => {
       descuento: body.descuento === undefined ? undefined : Number(body.descuento),
       condiciones: body.condiciones === undefined ? undefined : body.condiciones?.trim() || null
     });
-    if (!propuesta) return res.status(404).json({ mensaje: "Propuesta no encontrada o no editable" });
+    if (!propuesta) {
+      const existente = await Propuestas.getById(req.usuario.id_empresa, id);
+      return existente
+        ? res.status(409).json({ mensaje: "La propuesta no se puede editar en su estado actual" })
+        : res.status(404).json({ mensaje: "Propuesta no encontrada" });
+    }
     res.json(propuesta);
   } catch (error) {
     responderError(res, error, "Error al editar la propuesta");
@@ -85,13 +91,16 @@ const validarItem = (body, parcial = false) => {
     if (!enteroPositivo(body.id_servicio)) return "Seleccioná un servicio válido";
   }
   if (!parcial || body.cantidad !== undefined) {
-    if (!Number.isInteger(Number(body.cantidad)) || Number(body.cantidad) <= 0) return "La cantidad debe ser mayor a cero";
+    if (!Number.isInteger(Number(body.cantidad)) || Number(body.cantidad) <= 0 || Number(body.cantidad) > 2147483647) {
+      return "La cantidad debe ser mayor a cero";
+    }
   }
   if (body.precio_unitario !== undefined && !montoValido(body.precio_unitario)) {
     return "El precio debe ser un importe igual o mayor a cero";
   }
-  if (body.descripcion !== undefined && body.descripcion !== null && typeof body.descripcion !== "string") {
-    return "La descripción no es válida";
+  if (body.descripcion !== undefined && body.descripcion !== null &&
+    (typeof body.descripcion !== "string" || body.descripcion.length > 200)) {
+    return "La descripción debe tener hasta 200 caracteres";
   }
   return null;
 };
@@ -121,6 +130,7 @@ export const actualizarItem = async (req, res) => {
   if (!idValido(id) || !idValido(idItem)) return res.status(404).json({ mensaje: "Ítem no encontrado" });
   const errorValidacion = validarItem(req.body, true);
   if (errorValidacion) return res.status(400).json({ mensaje: errorValidacion });
+  if (!Object.keys(req.body ?? {}).length) return res.status(400).json({ mensaje: "Indicá los datos a actualizar" });
   try {
     const item = await Propuestas.updateItem(req.usuario.id_empresa, id, idItem, {
       ...req.body,
@@ -129,7 +139,12 @@ export const actualizarItem = async (req, res) => {
       precio_unitario: req.body.precio_unitario === undefined ? undefined : Number(req.body.precio_unitario),
       descripcion: req.body.descripcion === undefined ? undefined : req.body.descripcion?.trim() || null
     });
-    if (!item) return res.status(404).json({ mensaje: "Ítem o propuesta no encontrado, o propuesta no editable" });
+    if (!item) {
+      const existente = await Propuestas.getById(req.usuario.id_empresa, id);
+      return existente && !["en_preparacion", "rechazada", "vencida"].includes(existente.estado)
+        ? res.status(409).json({ mensaje: "La propuesta no se puede editar en su estado actual" })
+        : res.status(404).json({ mensaje: "Ítem o propuesta no encontrado" });
+    }
     res.json(item);
   } catch (error) {
     responderError(res, error, "Error al editar el servicio de la propuesta");

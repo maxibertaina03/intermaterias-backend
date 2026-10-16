@@ -2,9 +2,12 @@ import * as Tareas from "../models/postgres/tareas.model.js";
 import { idValido, responderError } from "../lib/errores.js";
 
 const estados = ["pendiente", "en_curso", "hecha"];
-const fechaValida = (fecha) =>
-  fecha === null || fecha === "" ||
-  (typeof fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fecha) && !Number.isNaN(Date.parse(`${fecha}T00:00:00`)));
+const fechaValida = (fecha) => {
+  if (fecha === null || fecha === "") return true;
+  if (typeof fecha !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
+  const fechaParseada = new Date(`${fecha}T00:00:00Z`);
+  return !Number.isNaN(fechaParseada.getTime()) && fechaParseada.toISOString().slice(0, 10) === fecha;
+};
 
 export const listar = async (req, res) => {
   const { evento } = req.query;

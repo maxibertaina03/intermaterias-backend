@@ -3,7 +3,7 @@ import { crear, eliminar, listar, actualizar } from "../controllers/tareas.contr
 import { requireRol } from "../middlewares/requireRol.js";
 
 const router = Router();
-const equipoOrganizacion = requireRol("responsable_organizacion", "integrante");
+const equipoOrganizacion = requireRol("responsable_organizacion", "integrante", "responsable_propuesta");
 
 router.get("/", listar);
 router.post("/", equipoOrganizacion, crear);
