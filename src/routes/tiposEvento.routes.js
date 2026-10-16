@@ -1,11 +1,14 @@
-// /api/tipos-evento · Responsable: Facu
-// Reemplazar la ruta provisoria por las reales (ver ESTRUCTURA.md: "Endpoints por área").
+// /api/tipos-evento
 import { Router } from "express";
+import { actualizarTipo, crearTipo, eliminarTipo, listarTipos } from "../controllers/catalogos.controller.js";
+import { requireRol } from "../middlewares/requireRol.js";
 
 const router = Router();
+const gestion = requireRol("atencion_cliente", "responsable_propuesta", "responsable_organizacion");
 
-router.all("/{*resto}", (req, res) => {
-  res.status(501).json({ mensaje: "En construcción (Facu)" });
-});
+router.get("/", listarTipos);
+router.post("/", gestion, crearTipo);
+router.put("/:id", gestion, actualizarTipo);
+router.delete("/:id", gestion, eliminarTipo);
 
 export default router;
