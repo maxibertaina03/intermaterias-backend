@@ -37,7 +37,7 @@ export const getUser = async (id_empresa, id_usuario) => {
 export const create = async (id_empresa, tarea) => {
   const { rows } = await pool.query(
     `INSERT INTO tareas (id_empresa, id_evento, id_responsable, descripcion, fecha_prevista)
-     SELECT $1, e.id_evento, $4, $5, $6
+     SELECT $1, e.id_evento, $3, $4, $5
        FROM eventos e
       WHERE e.id_evento = $2 AND e.id_empresa = $1
         AND e.estado IN ('confirmado', 'en_preparacion')
