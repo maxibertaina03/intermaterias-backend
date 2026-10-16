@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Sistema de eventos (intermaterias) - Script de la base de datos
--- Versión 2: ajustada con lo confirmado en el relevamiento (ronda 1).
+-- Versión 3: login con Clerk (usuarios.clerk_user_id en lugar de password_hash).
 -- Crea toda la estructura desde cero y carga datos de prueba.
 -- Se puede ejecutar varias veces: primero borra todo.
 --
@@ -57,7 +57,7 @@ CREATE TABLE usuarios (
     id_empresa INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    clerk_user_id VARCHAR(64) UNIQUE,   -- se completa la primera vez que entra con Clerk (las contraseñas las maneja Clerk)
     activo BOOLEAN DEFAULT TRUE,
     UNIQUE (id_empresa, email),
     FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa)
@@ -289,12 +289,13 @@ INSERT INTO empresas (nombre, cuit, email, telefono, direccion) VALUES
 ('Fiestas Norte', '30-70987654-3', 'info@fiestasnorte.com', '351-4553344', 'Rafael Núñez 4500, Córdoba'),            -- 2
 ('Producciones Sur', '30-69876543-1', 'hola@produccionessur.com', NULL, NULL);                                       -- 3
 
--- Personal (las contraseñas son hashes de prueba)
-INSERT INTO usuarios (id_empresa, nombre, email, password_hash) VALUES
-(1, 'Sofía Pereyra', 'sofia@eventosdelcentro.com', '$2b$10$prueba.hash.no.real.000000000000000000000000000001'),   -- 1
-(1, 'Mateo Gómez', 'mateo@eventosdelcentro.com', '$2b$10$prueba.hash.no.real.000000000000000000000000000002'),     -- 2
-(1, 'Valentina Ruiz', 'valen@eventosdelcentro.com', '$2b$10$prueba.hash.no.real.000000000000000000000000000003'),  -- 3
-(2, 'Joaquín López', 'joaquin@fiestasnorte.com', '$2b$10$prueba.hash.no.real.000000000000000000000000000004');     -- 4
+-- Personal. Para entrar con Clerk, la persona tiene que estar cargada con SU email:
+-- la primera vez que inicia sesión queda vinculada (ver database/alta-personal.sql).
+INSERT INTO usuarios (id_empresa, nombre, email) VALUES
+(1, 'Sofía Pereyra', 'sofia@eventosdelcentro.com'),   -- 1
+(1, 'Mateo Gómez', 'mateo@eventosdelcentro.com'),     -- 2
+(1, 'Valentina Ruiz', 'valen@eventosdelcentro.com'),  -- 3
+(2, 'Joaquín López', 'joaquin@fiestasnorte.com');     -- 4
 
 -- Roles: Sofía atiende y arma propuestas (dos roles), Mateo organiza, Valentina es integrante
 INSERT INTO usuario_roles (id_usuario, rol) VALUES

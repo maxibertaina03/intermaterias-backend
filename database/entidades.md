@@ -1,6 +1,6 @@
 # Entidades y atributos del sistema de eventos
 
-> **Versión 2 · 15/10/2026** — ajustada con lo **confirmado en el relevamiento** (ronda 1).
+> **Versión 3 · 16/10/2026** — login con Clerk. (v2: ajustada con lo **confirmado en el relevamiento**.)
 > Todos tenemos que poder explicar por qué existe cada tabla.
 > Términos, estados y reglas: [lenguaje ubicuo](https://github.com/maxibertaina03/intermaterias-infra/blob/develop/docs/si/03-dominio.md).
 
@@ -35,6 +35,7 @@ organizadora tiene `id_empresa` → `empresas`.
 | Nuevos **estados de `eventos`** (`recibida`, `falta_informacion`, `propuesta_enviada`, `no_aceptada`…) | Distinguir "pendiente de atención" de "propuesta enviada" es clave para no perder pedidos | R [M, T] |
 | `propuestas`: estados `presentada` y **`vencida`**, `fecha_presentacion`, `vigencia_dias` (15) y `descuento` | Las propuestas vencen a los 15 días; hay descuentos puntuales | R [T] |
 | `evento_servicios`: **`es_propio`** y **`id_responsable`** | Algunos servicios los hace el equipo propio, con un responsable | R [F] |
+| **v3:** `usuarios.clerk_user_id` en lugar de `password_hash` | El login lo hace **Clerk** (aprobado por el profe): las contraseñas no se guardan en nuestra base | Etapa 3 |
 
 ## Lo que NO guardamos (fuera del alcance)
 
@@ -74,7 +75,7 @@ Solo el personal de la empresa usa el sistema [R M]. Los roles van en `usuario_r
 | id_empresa | INT | NOT NULL, FK → empresas | |
 | nombre | VARCHAR(100) | NOT NULL | |
 | email | VARCHAR(150) | NOT NULL, UNIQUE (id_empresa, email) | Para iniciar sesión |
-| password_hash | VARCHAR(255) | NOT NULL | Nunca la contraseña en texto plano |
+| clerk_user_id | VARCHAR(64) | UNIQUE (NULL hasta el primer ingreso) | Vincula a la persona con su cuenta de Clerk. **Alta por email:** la empresa carga a la persona con su email y, la primera vez que entra con Clerk, se completa solo |
 | activo | BOOLEAN | DEFAULT TRUE | Dar de baja sin borrar su historial |
 
 ### 3. `usuario_roles` — roles de cada usuario · R [M] (tabla N:M con valor fijo)

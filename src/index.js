@@ -4,7 +4,8 @@ import express from "express";
 import cors from "cors";
 import empresasRouter from "./routes/empresas.routes.js";
 import instanciaRouter from "./routes/instancia.routes.js";
-import { usuarioActual } from "./middlewares/usuarioActual.js";
+import { clerkMiddleware } from "@clerk/express";
+import { usaClerk, usuarioActual } from "./middlewares/usuarioActual.js";
 import meRouter from "./routes/me.routes.js";
 import clientesRouter from "./routes/clientes.routes.js";
 import eventosRouter from "./routes/eventos.routes.js";
@@ -34,6 +35,7 @@ app.use("/api/instancia", instanciaRouter);
 
 // ── Rutas que necesitan saber quién es el usuario (y de qué empresa) ──
 // Todas ya están montadas: cada uno completa su archivo de routes/ sin tocar este.
+if (usaClerk) app.use(clerkMiddleware());   // lee el token de Clerk que manda el front
 app.use("/api", usuarioActual);
 app.use("/api/me", meRouter);                                   // masita (login)
 app.use("/api/clientes", clientesRouter);                       // Lucas
@@ -54,4 +56,5 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(usaClerk ? "Login: Clerk" : `Login: modo desarrollo (DEV_ID_USUARIO=${process.env.DEV_ID_USUARIO ?? "sin definir"})`);
 });
