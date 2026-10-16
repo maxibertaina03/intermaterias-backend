@@ -32,9 +32,11 @@ req.usuario = { id_usuario: 1, id_empresa: 1, nombre: "Sofía Pereyra", email: "
 **Regla de oro:** toda consulta de datos de una empresa filtra por `req.usuario.id_empresa`, y todo
 INSERT lo pone. Nunca se toma el `id_empresa` del body ni de la URL. Así una organizadora jamás ve datos de otra.
 
-**Mientras no está el login:** en tu `.env` poné `DEV_ID_USUARIO=1` (Sofía, de *Eventos del Centro*). Para
-probar otros roles: `2` = Mateo (organización), `3` = Valentina (integrante). Cuando masita termine el login
-con Clerk, esto se reemplaza solo: **no cambia nada en tu código**.
+**Dos modos de login** (no cambia nada en tu código):
+- **Sin claves de Clerk** en el `.env` → modo desarrollo: `DEV_ID_USUARIO=1` (Sofía, de *Eventos del Centro*).
+  Otros roles: `2` = Mateo (organización), `3` = Valentina (integrante). Es lo más cómodo para programar.
+- **Con `CLERK_SECRET_KEY` y `CLERK_PUBLISHABLE_KEY`** → login real: el front manda el token y la persona se
+  vincula por **email** con la tabla `usuarios` (alta del personal: `database/alta-personal.sql`).
 
 ## Ejemplo completo (un listado y un alta con multitenant)
 
