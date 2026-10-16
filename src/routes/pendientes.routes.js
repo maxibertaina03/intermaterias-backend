@@ -1,11 +1,8 @@
-// /api/pendientes · Responsable: Tomi
-// Reemplazar la ruta provisoria por las reales (ver ESTRUCTURA.md: "Endpoints por área").
 import { Router } from "express";
+import { listar } from "../controllers/pendientes.controller.js";
 
 const router = Router();
 
-router.all("/{*resto}", (req, res) => {
-  res.status(501).json({ mensaje: "En construcción (Tomi)" });
-});
+router.get("/", listar);
 
 export default router;

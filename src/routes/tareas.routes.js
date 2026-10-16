@@ -1,11 +1,13 @@
-// /api/tareas · Responsable: Tomi
-// Reemplazar la ruta provisoria por las reales (ver ESTRUCTURA.md: "Endpoints por área").
 import { Router } from "express";
+import { crear, eliminar, listar, actualizar } from "../controllers/tareas.controller.js";
+import { requireRol } from "../middlewares/requireRol.js";
 
 const router = Router();
+const equipoOrganizacion = requireRol("responsable_organizacion", "integrante", "responsable_propuesta");
 
-router.all("/{*resto}", (req, res) => {
-  res.status(501).json({ mensaje: "En construcción (Tomi)" });
-});
+router.get("/", listar);
+router.post("/", equipoOrganizacion, crear);
+router.put("/:id", equipoOrganizacion, actualizar);
+router.delete("/:id", equipoOrganizacion, eliminar);
 
 export default router;
