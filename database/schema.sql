@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Sistema de eventos (intermaterias) - Script de la base de datos
--- Versión 3: login con Clerk (usuarios.clerk_user_id en lugar de password_hash).
+-- Versión 4: login con Clerk por usuario y contraseña (usuarios.clerk_user_id; email opcional).
 -- Crea toda la estructura desde cero y carga datos de prueba.
 -- Se puede ejecutar varias veces: primero borra todo.
 --
@@ -56,8 +56,8 @@ CREATE TABLE usuarios (
     id_usuario SERIAL PRIMARY KEY,
     id_empresa INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL,
-    clerk_user_id VARCHAR(64) UNIQUE,   -- se completa la primera vez que entra con Clerk (las contraseñas las maneja Clerk)
+    email VARCHAR(150),
+    clerk_user_id VARCHAR(64) UNIQUE,   -- cuenta de Clerk (se crea sola la primera vez que entra; las contraseñas las maneja Clerk)
     activo BOOLEAN DEFAULT TRUE,
     UNIQUE (id_empresa, email),
     FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa)
@@ -289,8 +289,8 @@ INSERT INTO empresas (nombre, cuit, email, telefono, direccion) VALUES
 ('Fiestas Norte', '30-70987654-3', 'info@fiestasnorte.com', '351-4553344', 'Rafael Núñez 4500, Córdoba'),            -- 2
 ('Producciones Sur', '30-69876543-1', 'hola@produccionessur.com', NULL, NULL);                                       -- 3
 
--- Personal. Para entrar con Clerk, la persona tiene que estar cargada con SU email:
--- la primera vez que inicia sesión queda vinculada (ver database/alta-personal.sql).
+-- Personal de prueba. Las personas que entran con Clerk se crean solas la primera vez
+-- (en la empresa CLERK_ID_EMPRESA con los roles de CLERK_ROLES).
 INSERT INTO usuarios (id_empresa, nombre, email) VALUES
 (1, 'Sofía Pereyra', 'sofia@eventosdelcentro.com'),   -- 1
 (1, 'Mateo Gómez', 'mateo@eventosdelcentro.com'),     -- 2
