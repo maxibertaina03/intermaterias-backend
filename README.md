@@ -104,7 +104,7 @@ Así, cuando agreguemos **MongoDB**, solo hay que crear `src/models/mongo/empres
 funciones (`getAll`, `getById`, `create`, `update`, `remove`), registrarlo en `src/models/index.js`
 y poner `DB_CLIENT=mongo` en el `.env`. Rutas y controllers no cambian.
 
-## Link de diagrama: https://dbdiagram.io/d/6acea6dbe308025ea5e70018
+## Link de diagrama: https://dbdiagram.io/d/6ad23077fe5cc8bda2d9dbd2
 
 ## Docker
 
@@ -127,6 +127,10 @@ curl -i localhost:3000/api/instancia
 ```
 
 Devuelve `{ "instancia": "<id-del-contenedor>" }` y el header `X-Instancia`.
+
+## Estructura para programar
+
+Antes de agregar endpoints leé **[ESTRUCTURA.md](ESTRUCTURA.md)**: capas, multitenant con `req.usuario`, convenciones y **los endpoints de cada área**.
 
 ## Trabajo en grupo
 

@@ -1,45 +1,59 @@
 # Entidades y atributos del sistema de eventos
 
-> **Borrador para discutir en grupo (BD-1).** Cada uno revisa, comenta en el PR y propone cambios.
+> **Versión 4 · 16/10/2026** — login con Clerk por usuario y contraseña. (v2: ajustada con lo **confirmado en el relevamiento**.)
 > Todos tenemos que poder explicar por qué existe cada tabla.
+> Términos, estados y reglas: [lenguaje ubicuo](https://github.com/maxibertaina03/intermaterias-infra/blob/develop/docs/si/03-dominio.md).
 
 ## Punto de partida
 
-**Qué hace el sistema** (documento "Objetivo y alcance"): ayuda a una organizadora a gestionar los
-eventos que le encargan, desde la solicitud hasta el cierre:
+**Qué hace el sistema** (documento "Objetivo y alcance"): ayuda a una **empresa organizadora** a gestionar
+los eventos que le encargan los **centros de estudiantes**, desde la solicitud hasta el cierre:
 
 ```
-solicitud ──▶ propuesta (servicios + importes) ──▶ aceptada / rechazada
+solicitud ──▶ propuesta (servicios + importes) ──▶ aceptada / rechazada / vencida
                                                       │
-                     confirmado ──▶ servicios con proveedores + tareas ──▶ realizado / cancelado
+                     confirmado ──▶ servicios (proveedor o equipo propio) + tareas ──▶ realizado / cancelado
 ```
 
-**Multitenant:** la tabla `empresas` representa a **cada organizadora** que usa el sistema. Nuestro
-centro de estudiantes es una "empresa"; el de otra escuela sería otra. Por eso toda tabla con datos
-propios de una organizadora tiene `id_empresa` → `empresas`.
+**Multitenant:** la tabla `empresas` representa a **cada empresa organizadora** que usa el sistema. Los
+centros de estudiantes son sus **clientes** (tabla `clientes`). Toda tabla con datos propios de una
+organizadora tiene `id_empresa` → `empresas`.
 
 **Origen de cada dato:**
-- **A** = lo pide el documento de alcance (seguro).
-- **H** = hipótesis nuestra sobre el centro de estudiantes: hay que **confirmarla en el relevamiento**.
+- **A** = lo pide el documento de alcance.
+- **R** = confirmado en el relevamiento: **[M]** charla de masita (clientes), **[T]** charla de Tomi
+  (propuesta), **[F]** charla de Facu (proveedores). Conversaciones en `intermaterias-infra/docs/si/relevamiento/conversaciones/`.
+- **H** = hipótesis: falta confirmarla con el cliente.
+
+## Qué cambió respecto de la versión 1
+
+| Cambio | Por qué | Fuente |
+|--------|---------|--------|
+| La organizadora es una **empresa**; el **centro de estudiantes es el cliente** | Lo aclaró el cliente | R [M] |
+| Nueva tabla **`contactos`**, separada de `clientes` | El contacto (delegado, miembro de la comisión) puede cambiar sin que cambie el cliente | R [M] |
+| `usuarios.rol` pasa a la tabla **`usuario_roles`** | Hay 4 roles y **una persona puede tener varios** | R [M] |
+| Nuevos **estados de `eventos`** (`recibida`, `falta_informacion`, `propuesta_enviada`, `no_aceptada`…) | Distinguir "pendiente de atención" de "propuesta enviada" es clave para no perder pedidos | R [M, T] |
+| `propuestas`: estados `presentada` y **`vencida`**, `fecha_presentacion`, `vigencia_dias` (15) y `descuento` | Las propuestas vencen a los 15 días; hay descuentos puntuales | R [T] |
+| `evento_servicios`: **`es_propio`** y **`id_responsable`** | Algunos servicios los hace el equipo propio, con un responsable | R [F] |
+| **v3:** `usuarios.clerk_user_id` en lugar de `password_hash` | El login lo hace **Clerk** (aprobado por el profe): las contraseñas no se guardan en nuestra base | Etapa 3 |
+| **v4:** `usuarios.email` pasa a ser opcional | Se entra con **usuario y contraseña** de Clerk; el usuario se crea solo la primera vez | Etapa 3 |
 
 ## Lo que NO guardamos (fuera del alcance)
-
-La guía de la actividad pregunta por inscripciones, entradas y pagos, pero el alcance del software
-los deja afuera:
 
 | Tema | Por qué no |
 |------|------------|
 | Lista de asistentes (quién va y quién no) | "No se administra a cada invitado": guardamos solo la cantidad estimada |
 | Tarjetas / entradas y su precio | Venta de entradas: fuera del alcance |
-| Cobros (efectivo, transferencia), pagos a proveedores | Cobros, pagos y facturación: fuera del alcance |
+| Cobros, señas, pagos a proveedores | Cobros y pagos: fuera del alcance. Además el cliente confirmó que **no piden seña** [T] |
+| Historial de versiones de la propuesta | Solo importa la vigente [T] (los cambios relevantes sí se registran) |
 
 ---
 
 ## Entidades
 
-### 1. `empresas` — la organizadora (tenant) · A
+### 1. `empresas` — la empresa organizadora (tenant) · A
 
-**Sin cambios**, tal como quedó en la actividad anterior.
+**Sin cambios** desde la primera actividad.
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
@@ -52,52 +66,71 @@ los deja afuera:
 | activo | BOOLEAN | DEFAULT TRUE |
 | fecha_creacion | TIMESTAMP | DEFAULT NOW() |
 
-### 2. `usuarios` — personal que usa el sistema · A (roles: H)
+### 2. `usuarios` — personal de la organizadora · A
 
-El alcance pide "acceso identificado del personal, con permisos sencillos". Los usuarios son
-integrantes del centro, **no** clientes ni proveedores.
+Solo el personal de la empresa usa el sistema [R M]. Los roles van en `usuario_roles`.
 
 | Atributo | Tipo | Restricciones | Por qué |
 |----------|------|---------------|---------|
 | id_usuario | SERIAL | PK | |
-| id_empresa | INT | NOT NULL, FK → empresas | Cada usuario pertenece a una organizadora |
+| id_empresa | INT | NOT NULL, FK → empresas | |
 | nombre | VARCHAR(100) | NOT NULL | |
-| email | VARCHAR(150) | NOT NULL, UNIQUE (id_empresa, email) | Para iniciar sesión |
-| password_hash | VARCHAR(255) | NOT NULL | Nunca se guarda la contraseña en texto plano |
-| rol | VARCHAR(20) | NOT NULL, CHECK (rol IN ('admin', 'organizador', 'colaborador')) | **H**: los roles reales salen del relevamiento |
+| email | VARCHAR(150) | UNIQUE (id_empresa, email) | Opcional: se copia de Clerk si la cuenta tiene email |
+| clerk_user_id | VARCHAR(64) | UNIQUE | Cuenta de Clerk. **Alta automática:** la primera vez que alguien entra, se crea su usuario en la empresa por defecto con sus roles |
 | activo | BOOLEAN | DEFAULT TRUE | Dar de baja sin borrar su historial |
 
-### 3. `clientes` — quien encarga el evento · A (tipos: H)
+### 3. `usuario_roles` — roles de cada usuario · R [M] (tabla N:M con valor fijo)
 
-Cada evento corresponde a **un** cliente contratante. En un centro de estudiantes puede ser un curso,
-la comisión directiva o la institución (**H**, es la pregunta clave del relevamiento).
+"Una misma persona puede asumir más de una de estas responsabilidades" [M].
+
+| Atributo | Tipo | Restricciones |
+|----------|------|---------------|
+| id_usuario | INT | PK compuesta, FK → usuarios |
+| rol | VARCHAR(30) | PK compuesta, CHECK (rol IN ('atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')) |
+
+### 4. `clientes` — quien encarga el evento · R [M]
+
+El **centro de estudiantes** (normalmente su comisión directiva) o un grupo de estudiantes en nombre del
+centro [M]. **H:** si un curso puede ser cliente por sí mismo (el cliente se contradijo).
 
 | Atributo | Tipo | Restricciones | Por qué |
 |----------|------|---------------|---------|
 | id_cliente | SERIAL | PK | |
 | id_empresa | INT | NOT NULL, FK → empresas | |
-| nombre | VARCHAR(150) | NOT NULL | Ej: "5° A", "Comisión directiva" |
-| tipo | VARCHAR(20) | NOT NULL, CHECK (tipo IN ('curso', 'comision', 'institucion', 'otro')) | **H** |
-| contacto_nombre | VARCHAR(100) | | Quien lo representa (delegado, etc.) |
-| telefono | VARCHAR(30) | | |
-| email | VARCHAR(150) | | |
+| nombre | VARCHAR(150) | NOT NULL | Ej: "Centro de Estudiantes Instituto San Martín" |
+| tipo | VARCHAR(30) | NOT NULL, CHECK (tipo IN ('centro_estudiantes', 'grupo_estudiantes', 'curso')) | `curso`: **H** |
+| institucion | VARCHAR(150) | | El colegio: interviene (por ejemplo, la sede) pero **no contrata** [M] |
 | activo | BOOLEAN | DEFAULT TRUE | |
 
-### 4. `cursos` — cursos de la escuela · H
+### 5. `contactos` — personas de contacto del cliente · R [M]
 
-Para registrar **cuántos asistentes estimados hay por curso** (dato general, no una lista de alumnos).
+"Si cambia el representante, no significa que cambie el cliente" [M]. Por eso el contacto es una tabla
+aparte, y cada evento indica con quién se habla.
+
+| Atributo | Tipo | Restricciones | Por qué |
+|----------|------|---------------|---------|
+| id_contacto | SERIAL | PK | |
+| id_cliente | INT | NOT NULL, FK → clientes | |
+| nombre | VARCHAR(100) | NOT NULL | Nombre y apellido del representante [M] |
+| telefono | VARCHAR(30) | | Para decisiones rápidas [M] |
+| email | VARCHAR(150) | | Para enviar la propuesta [M] |
+| rol | VARCHAR(80) | | Ej: "delegado de 6° A", "presidente de la comisión" |
+| vigente | BOOLEAN | DEFAULT TRUE | Si deja de participar, se marca `FALSE` y se agrega el nuevo (problema real: contactos viejos [M]) |
+
+### 6. `cursos` — cursos de la escuela · H
+
+Para la cantidad estimada de asistentes por curso. **H:** el relevamiento todavía no confirmó que lo usen.
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
 | id_curso | SERIAL | PK |
 | id_empresa | INT | NOT NULL, FK → empresas |
-| nombre | VARCHAR(30) | NOT NULL, UNIQUE (id_empresa, nombre) — ej: "5° A" |
+| id_cliente | INT | FK → clientes (el centro al que pertenece el curso) |
+| nombre | VARCHAR(30) | NOT NULL — ej: "5° A" |
 | anio | SMALLINT | CHECK (anio BETWEEN 1 AND 7) |
 | division | VARCHAR(5) | |
 
-### 5. `tipos_evento` — fiesta de bienvenida, egresados… · A
-
-Catálogo propio de cada organizadora, para consultar y filtrar eventos por tipo.
+### 7. `tipos_evento` — bienvenida, egresados, aniversario… · R [M]
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
@@ -105,9 +138,10 @@ Catálogo propio de cada organizadora, para consultar y filtrar eventos por tipo
 | id_empresa | INT | NOT NULL, FK → empresas |
 | nombre | VARCHAR(80) | NOT NULL, UNIQUE (id_empresa, nombre) |
 
-### 6. `sedes` — salones y lugares · A
+"El tipo de evento nos orienta, pero no determina automáticamente qué servicios ofrecer" [M]: por eso no
+hay relación entre tipos y servicios.
 
-La solicitud tiene una "sede prevista" y los lugares se repiten entre eventos.
+### 8. `sedes` — salones y lugares · A
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
@@ -117,31 +151,33 @@ La solicitud tiene una "sede prevista" y los lugares se repiten entre eventos.
 | direccion | VARCHAR(200) | |
 | capacidad | INT | CHECK (capacidad > 0) |
 
-### 7. `eventos` — la solicitud y todo su ciclo de vida · A (estados: H)
+### 9. `eventos` — la solicitud y todo su ciclo de vida · A + R [M, T]
 
-Usamos **una sola tabla** para la solicitud y el evento: es el mismo encargo que va cambiando de
-estado. Así "consultar eventos por fecha o estado" es una sola consulta.
+Una sola tabla: es el mismo encargo que cambia de estado. Antes de aceptar la propuesta lo llamamos
+**solicitud**; después, **evento** (ver lenguaje ubicuo).
 
 | Atributo | Tipo | Restricciones | Por qué |
 |----------|------|---------------|---------|
 | id_evento | SERIAL | PK | |
 | id_empresa | INT | NOT NULL, FK → empresas | |
-| id_cliente | INT | NOT NULL, FK → clientes | Un evento = un cliente contratante |
+| id_cliente | INT | NOT NULL, FK → clientes | Un evento = un cliente (A) |
+| id_contacto | INT | FK → contactos | Con quién se habla en este evento [M] |
 | id_tipo_evento | INT | NOT NULL, FK → tipos_evento | |
-| id_sede | INT | FK → sedes (NULL) | Puede no estar definida al principio |
+| id_sede | INT | FK → sedes (NULL) | La sede puede no estar confirmada [M] |
 | nombre | VARCHAR(150) | NOT NULL | Ej: "Bienvenida 2027" |
-| fecha | DATE | (NULL) | Puede ser tentativa o no estar definida (**H**) |
-| hora_inicio | TIME | | Eventos de una jornada |
-| cantidad_estimada | INT | CHECK (cantidad_estimada > 0) | Dato general (alcance) |
-| necesidades | TEXT | | Necesidades y preferencias |
-| estado | VARCHAR(20) | NOT NULL, DEFAULT 'solicitado', CHECK (estado IN ('solicitado', 'en_negociacion', 'confirmado', 'en_preparacion', 'realizado', 'cancelado')) | **H**: los estados reales salen del relevamiento |
-| motivo_cancelacion | TEXT | CHECK: obligatorio si estado = 'cancelado' | Se conserva el motivo de la cancelación |
-| observaciones_cierre | TEXT | | Cierre operativo básico |
+| fecha | DATE | NOT NULL | La fecha prevista es dato obligatorio para proponer [M] |
+| hora_inicio | TIME | | Eventos de una jornada (A) |
+| cantidad_estimada | INT | NOT NULL, CHECK (cantidad_estimada > 0) | Obligatorio para proponer [M] |
+| necesidades | TEXT | | Necesidades y preferencias [M] |
+| estado | VARCHAR(20) | NOT NULL, DEFAULT 'recibida', CHECK (ver abajo) | [M, T] |
+| motivo_cancelacion | TEXT | CHECK: obligatorio si `cancelado` | (A) |
+| observaciones_cierre | TEXT | | Cierre operativo (A) |
 | fecha_creacion | TIMESTAMP | DEFAULT NOW() | |
 
-### 8. `evento_cursos` — cantidad estimada por curso · H (tabla intermedia N:M)
+**Estados:** `recibida` → `falta_informacion` → `propuesta_enviada` → `confirmado` → `en_preparacion` (H) →
+`realizado` · también `no_aceptada` (rechazó y no siguió [T]) y `cancelado` (A).
 
-Un evento puede ser para varios cursos y un curso puede ir a muchos eventos.
+### 10. `evento_cursos` — cantidad estimada por curso · H (tabla intermedia N:M)
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
@@ -149,9 +185,10 @@ Un evento puede ser para varios cursos y un curso puede ir a muchos eventos.
 | id_curso | INT | PK compuesta, FK → cursos |
 | cantidad_estimada | INT | NOT NULL, CHECK (cantidad_estimada > 0) |
 
-### 9. `servicios` — catálogo de servicios · A
+### 11. `servicios` — catálogo de servicios · R [F, T]
 
-Lo que la organizadora ofrece en sus propuestas: salón, DJ, catering, decoración, seguridad…
+Catering, sonido e iluminación, decoración, fotografía, entretenimiento, mobiliario [F]. Tienen **precio de
+referencia** que se ajusta en cada propuesta [T].
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
@@ -162,89 +199,101 @@ Lo que la organizadora ofrece en sus propuestas: salón, DJ, catering, decoraci�
 | precio_referencia | NUMERIC(12,2) | CHECK (precio_referencia >= 0) |
 | activo | BOOLEAN | DEFAULT TRUE |
 
-### 10. `proveedores` — datos básicos · A
+### 12. `proveedores` — datos básicos · R [F]
+
+"No necesitamos administrar todos los detalles comerciales del proveedor" [F].
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
 | id_proveedor | SERIAL | PK |
 | id_empresa | INT | NOT NULL, FK → empresas |
-| nombre | VARCHAR(150) | NOT NULL |
-| contacto_nombre | VARCHAR(100) | |
+| nombre | VARCHAR(150) | NOT NULL — nombre o razón social [F] |
+| contacto_nombre | VARCHAR(100) | Con quién se habla [F] |
 | telefono | VARCHAR(30) | |
 | email | VARCHAR(150) | |
+| observaciones | TEXT | Condiciones particulares, aclaraciones [F] |
 | activo | BOOLEAN | DEFAULT TRUE |
 
-### 11. `proveedor_servicios` — qué servicios da cada proveedor · A (tabla intermedia N:M)
-
-Un proveedor puede dar varios servicios (DJ + sonido) y un servicio lo pueden dar varios proveedores.
+### 13. `proveedor_servicios` — qué servicios da cada proveedor · R [F] (tabla intermedia N:M)
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
 | id_proveedor | INT | PK compuesta, FK → proveedores |
 | id_servicio | INT | PK compuesta, FK → servicios |
 
-### 12. `propuestas` — la propuesta al cliente · A
+### 14. `propuestas` — la propuesta al cliente · R [T]
 
-"**Una** propuesta vigente por solicitud", que se modifica mientras se negocia y termina aceptada o
-rechazada. Sin historial de versiones (lo dice el alcance).
+**Una sola vigente** por solicitud; se ajusta mientras se negocia y no se guarda historial de versiones [T].
 
 | Atributo | Tipo | Restricciones | Por qué |
 |----------|------|---------------|---------|
 | id_propuesta | SERIAL | PK | |
 | id_empresa | INT | NOT NULL, FK → empresas | |
-| id_evento | INT | NOT NULL, UNIQUE, FK → eventos | UNIQUE = una sola por evento (1:1) |
-| estado | VARCHAR(20) | NOT NULL, DEFAULT 'borrador', CHECK (estado IN ('borrador', 'enviada', 'aceptada', 'rechazada')) | |
-| condiciones | TEXT | | Condiciones acordadas al confirmar |
-| motivo_rechazo | TEXT | | |
-| fecha_respuesta | TIMESTAMP | | Cuándo la aceptó o rechazó |
+| id_evento | INT | NOT NULL, UNIQUE, FK → eventos | Una por evento (1:1) [T] |
+| estado | VARCHAR(20) | NOT NULL, DEFAULT 'en_preparacion', CHECK (estado IN ('en_preparacion', 'presentada', 'aceptada', 'rechazada', 'vencida')) | [T] |
+| descuento | NUMERIC(12,2) | NOT NULL, DEFAULT 0, CHECK (descuento >= 0) | Descuento puntual sobre el total [T] (H: ¿por ítem?) |
+| condiciones | TEXT | | Condiciones particulares acordadas [T] |
+| motivo_rechazo | TEXT | | Opcional: "no siempre nos lo dice" [T] |
+| fecha_presentacion | TIMESTAMP | | Desde acá corren los días de vigencia [T] |
+| vigencia_dias | SMALLINT | NOT NULL, DEFAULT 15, CHECK (vigencia_dias > 0) | "Una vigencia de 15 días corridos" [T] |
+| fecha_respuesta | TIMESTAMP | | Cuándo la aceptó o rechazó [T] |
 | fecha_actualizacion | TIMESTAMP | DEFAULT NOW() | |
 
-El **total no se guarda**: se calcula sumando los ítems, así nunca queda desactualizado.
+- **Total** = suma de (cantidad × precio unitario) de los ítems − descuento. **No se guarda**: se calcula [T].
+- **Vence** si pasan `vigencia_dias` desde `fecha_presentacion` sin respuesta. Vencer no borra la solicitud;
+  se puede volver a presentar [T].
+- **Rechazada** se puede renegociar: vuelve a `presentada` [T].
+- **Aceptada** = el cliente aceptó expresamente (sin seña ni firma) y quedó registrado con `fecha_respuesta` [T].
 
-### 13. `propuesta_items` — servicios ofrecidos con su importe · A
+### 15. `propuesta_items` — servicios ofrecidos con su importe · R [T]
+
+"La propuesta detalla los servicios incluidos y el importe de cada uno, junto con el total" [T]. Los
+**paquetes** son solo un punto de partida para elegir los ítems; no se guardan (H: confirmar si hace falta).
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
 | id_item | SERIAL | PK |
 | id_propuesta | INT | NOT NULL, FK → propuestas |
 | id_servicio | INT | NOT NULL, FK → servicios |
+| descripcion | VARCHAR(200) | Características acordadas del servicio |
 | cantidad | INT | NOT NULL, DEFAULT 1, CHECK (cantidad > 0) |
 | precio_unitario | NUMERIC(12,2) | NOT NULL, CHECK (precio_unitario >= 0) |
 
-`precio_unitario` se copia del servicio pero se puede cambiar al negociar.
+### 16. `evento_servicios` — servicios acordados y quién los cumple · R [F]
 
-### 14. `evento_servicios` — servicios acordados y su proveedor · A
+Cuando la propuesta se acepta, cada servicio acordado se vuelve un **compromiso**. Lo cumple un
+**proveedor** externo o el **equipo propio**, y siempre hay un **responsable** que lo sigue [F].
+"Haber contactado no significa confirmado" [F].
 
-Cuando la propuesta se acepta, cada servicio acordado se coordina con un proveedor, cuya
-participación queda **pendiente** o **confirmada**.
+| Atributo | Tipo | Restricciones | Por qué |
+|----------|------|---------------|---------|
+| id_evento_servicio | SERIAL | PK | |
+| id_evento | INT | NOT NULL, FK → eventos | |
+| id_servicio | INT | NOT NULL, FK → servicios | |
+| es_propio | BOOLEAN | NOT NULL, DEFAULT FALSE | Lo hace el equipo, sin proveedor [F] |
+| id_proveedor | INT | FK → proveedores (NULL); CHECK: NULL si `es_propio` | NULL hasta asignarlo |
+| id_responsable | INT | FK → usuarios | Quién sigue el tema [F] |
+| estado | VARCHAR(20) | NOT NULL, DEFAULT 'pendiente', CHECK (estado IN ('pendiente', 'confirmado')) | [F] (H: `no_disponible` / reemplazo) |
+| observaciones | TEXT | | Resultado del contacto, condiciones, pendientes [F] |
 
-| Atributo | Tipo | Restricciones |
-|----------|------|---------------|
-| id_evento_servicio | SERIAL | PK |
-| id_evento | INT | NOT NULL, FK → eventos |
-| id_servicio | INT | NOT NULL, FK → servicios |
-| id_proveedor | INT | FK → proveedores (NULL hasta asignarlo) |
-| estado | VARCHAR(20) | NOT NULL, DEFAULT 'pendiente', CHECK (estado IN ('pendiente', 'confirmado')) |
-| observaciones | TEXT | Lo que informó el proveedor |
-
-### 15. `tareas` — preparación y seguimiento · A
+### 17. `tareas` — preparación y seguimiento · A (estados: H)
 
 | Atributo | Tipo | Restricciones | Por qué |
 |----------|------|---------------|---------|
 | id_tarea | SERIAL | PK | |
 | id_empresa | INT | NOT NULL, FK → empresas | |
 | id_evento | INT | NOT NULL, FK → eventos | |
-| id_responsable | INT | FK → usuarios | Responsable interno |
+| id_responsable | INT | FK → usuarios | Responsable interno (A) |
 | descripcion | VARCHAR(200) | NOT NULL | |
 | fecha_prevista | DATE | | |
-| estado | VARCHAR(20) | NOT NULL, DEFAULT 'pendiente', CHECK (estado IN ('pendiente', 'en_curso', 'hecha')) | |
+| estado | VARCHAR(20) | NOT NULL, DEFAULT 'pendiente', CHECK (estado IN ('pendiente', 'en_curso', 'hecha')) | **H** |
 
-"Vencida" **no se guarda**: es una tarea no hecha con `fecha_prevista` anterior a hoy (se calcula).
+"Vencida" no se guarda: es una tarea no hecha con `fecha_prevista` anterior a hoy (se calcula).
 
-### 16. `cambios_evento` — registro de cambios relevantes · A
+### 18. `cambios_evento` — registro de cambios relevantes · A + R [M, T]
 
-El alcance pide registrar cambios relevantes (fecha, servicio acordado…) para revisar los
-compromisos afectados.
+Cambios de **fecha, sede, servicios o condiciones** que obligan a revisar los compromisos afectados; la
+revisión la hace el personal, no el sistema [M, T].
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
@@ -263,9 +312,13 @@ compromisos afectados.
 | Relación | Cardinalidad | Cómo se resuelve |
 |----------|--------------|------------------|
 | empresa — usuarios, clientes, cursos, tipos_evento, sedes, eventos, servicios, proveedores | 1 : N | `id_empresa` en cada tabla |
+| usuario — roles | 1 : N (valores fijos) | tabla `usuario_roles` |
+| cliente — contactos | 1 : N | `contactos.id_cliente` |
 | cliente — eventos | 1 : N | `eventos.id_cliente` |
+| contacto — eventos | 1 : N (opcional) | `eventos.id_contacto` |
+| cliente — cursos | 1 : N (opcional) | `cursos.id_cliente` |
 | tipo de evento — eventos | 1 : N | `eventos.id_tipo_evento` |
-| sede — eventos | 1 : N (opcional) | `eventos.id_sede` (NULL) |
+| sede — eventos | 1 : N (opcional) | `eventos.id_sede` |
 | evento — cursos | **N : M** | tabla `evento_cursos` |
 | proveedor — servicios | **N : M** | tabla `proveedor_servicios` |
 | evento — propuesta | 1 : 1 | `propuestas.id_evento` UNIQUE |
@@ -273,6 +326,7 @@ compromisos afectados.
 | servicio — ítems de propuesta | 1 : N | `propuesta_items.id_servicio` |
 | evento — servicios acordados | 1 : N | `evento_servicios.id_evento` |
 | proveedor — servicios acordados | 1 : N (opcional) | `evento_servicios.id_proveedor` |
+| usuario — servicios acordados (responsable) | 1 : N (opcional) | `evento_servicios.id_responsable` |
 | evento — tareas | 1 : N | `tareas.id_evento` |
 | usuario — tareas (responsable) | 1 : N | `tareas.id_responsable` |
 | evento — cambios | 1 : N | `cambios_evento.id_evento` |
@@ -282,18 +336,24 @@ compromisos afectados.
 
 | Recorrido del alcance | Tablas |
 |-----------------------|--------|
-| Registrar una solicitud | clientes, eventos (estado `solicitado`), evento_cursos |
-| Elaborar una propuesta | propuestas, propuesta_items, servicios |
-| Registrar su aceptación / rechazo | propuestas.estado, motivo_rechazo, fecha_respuesta |
-| Coordinar servicios y tareas | evento_servicios, proveedores, tareas, usuarios |
-| Consultar pendientes | evento_servicios con estado `pendiente`; tareas no hechas o vencidas |
+| Registrar una solicitud | clientes, contactos, eventos (estado `recibida`), evento_cursos |
+| Elaborar una propuesta | propuestas (`en_preparacion` → `presentada`), propuesta_items, servicios |
+| Registrar su aceptación | propuestas `aceptada` + `fecha_respuesta`; evento `confirmado` |
+| Propuesta rechazada | propuestas `rechazada` (+ motivo si lo da); evento `no_aceptada` o se renegocia |
+| Coordinar servicios y tareas | evento_servicios (proveedor o propio + responsable), proveedores, tareas, usuarios |
+| Consultar pendientes | evento_servicios `pendiente`; tareas no hechas o vencidas; propuestas por vencer |
 | Cambio relevante | cambios_evento |
-| Cerrar o cancelar | eventos.estado, observaciones_cierre, motivo_cancelacion |
+| Cerrar o cancelar | eventos `realizado` (+ observaciones) / `cancelado` (+ motivo) |
 
-## Para discutir en el PR
+## Reglas que valida la API (no la base)
 
-1. ¿Una sola tabla `eventos` para solicitud + evento, o separarlas? (propuesta: una sola)
-2. ¿Los roles de `usuarios` (admin / organizador / colaborador) alcanzan?
-3. ¿Hace falta `cursos`? Depende de que el relevamiento confirme que se usa para organizar.
-4. ¿`sedes` como tabla propia o el salón como un servicio más con proveedor? (propuesta: las dos cosas: la sede es el lugar y el alquiler del salón es un servicio)
-5. ¿Falta algo que necesite el centro de estudiantes **dentro del alcance**?
+- **No se cargan servicios acordados ni tareas** si el evento no está `confirmado` o posterior [M].
+- Al aceptar la propuesta, el evento pasa a `confirmado` y se crean los `evento_servicios` desde los ítems [T].
+- Una propuesta `presentada` pasa a `vencida` si pasaron `vigencia_dias` sin respuesta [T].
+
+## Pendiente de confirmar (hipótesis)
+
+- ¿Un **curso** puede ser cliente? ¿Se usan los **cursos** para organizar? (`cursos`, `evento_cursos`)
+- Estados de las **tareas** y del **servicio propio**; estado `no_disponible` / reemplazo de proveedor.
+- ¿El **descuento** es sobre el total o por ítem? ¿Hace falta guardar los **paquetes**?
+- Detalles de la **cancelación** (quién decide, qué pasa con proveedores y tareas).
