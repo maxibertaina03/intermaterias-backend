@@ -220,7 +220,7 @@ export const cambiarEstado = async (id_empresa, id_evento, estado, observaciones
     }
     await client.query(
       `UPDATE eventos SET estado = $1,
-         observaciones_cierre = CASE WHEN $1 = 'realizado' THEN COALESCE($2, observaciones_cierre) ELSE observaciones_cierre END
+         observaciones_cierre = CASE WHEN $1::varchar = 'realizado' THEN COALESCE($2, observaciones_cierre) ELSE observaciones_cierre END
        WHERE id_evento = $3 AND id_empresa = $4`,
       [estado, observaciones_cierre ?? null, id_evento, id_empresa]
     );
