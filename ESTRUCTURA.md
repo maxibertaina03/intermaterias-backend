@@ -150,6 +150,10 @@ Todos bajo `/api`. Los nombres de campos son los de `database/entidades.md`.
 | `PUT /servicios-acordados/:id` | Asignar proveedor **o** marcar como propio, responsable, observaciones |
 | `POST /servicios-acordados/:id/confirmar` | → `confirmado` (contactado ≠ confirmado) |
 
+Para `PUT /proveedores/:id/servicios`, el body es `{ "id_servicios": [1, 2] }`; enviar una lista vacía quita las asociaciones. El `GET /proveedores` y `GET /proveedores/:id` devuelven esos ids en `id_servicios`. Los cuerpos de servicios y proveedores usan los campos de sus tablas en `database/entidades.md`; `activo` es opcional y comienza en `true`.
+
+`GET /servicios-acordados?evento=ID` filtra por evento (sin el filtro devuelve los de la organizadora). `PUT /servicios-acordados/:id` acepta `es_propio`, `id_proveedor`, `id_responsable` y `observaciones`; los campos pueden actualizarse parcialmente. Un servicio propio no lleva proveedor. Cambiar el tipo de cumplimiento o el proveedor devuelve el estado a `pendiente`. La confirmación requiere que el evento esté confirmado o en preparación y, si el servicio es externo, que tenga asignado un proveedor activo que ofrezca ese servicio. Las rutas que modifican catálogos requieren `atencion_cliente`, `responsable_propuesta` o `responsable_organizacion`; las que modifican coordinación requieren `responsable_organizacion` o `integrante`.
+
 ### masita · Login
 | Método y ruta | Qué hace |
 |---|---|
