@@ -220,7 +220,8 @@ const cambiarEstado = async (id_empresa, id_propuesta, accion, motivo = null) =>
         await client.query("ROLLBACK");
         return { estado: "sin_items" };
       }
-      if (!["recibida", "propuesta_enviada", "no_aceptada"].includes(propuesta.estado_evento)) {
+      // falta_informacion: cuando el centro completa los datos, se presenta la propuesta igual
+      if (!["recibida", "falta_informacion", "propuesta_enviada", "no_aceptada"].includes(propuesta.estado_evento)) {
         await client.query("ROLLBACK");
         return { estado: "evento_invalido" };
       }
