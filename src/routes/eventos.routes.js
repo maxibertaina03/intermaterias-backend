@@ -1,11 +1,22 @@
 // /api/eventos (solicitudes, eventos, cambios, cierre y cancelación) · Responsable: Lucas
-// Reemplazar la ruta provisoria por las reales (ver ESTRUCTURA.md: "Endpoints por área").
 import { Router } from "express";
+import {
+  actualizar, cambiarEstado, cancelar, crear, listar, obtener, obtenerCambios,
+} from "../controllers/eventos.controller.js";
+import { requireRol } from "../middlewares/requireRol.js";
 
 const router = Router();
+// Reciben y registran la solicitud
+const atencionCliente = requireRol("atencion_cliente");
+// Coordinan la preparación: cambian estado, editan logística, cancelan
+const organizacion = requireRol("atencion_cliente", "responsable_organizacion");
 
-router.all("/{*resto}", (req, res) => {
-  res.status(501).json({ mensaje: "En construcción (Lucas)" });
-});
+router.get("/", listar);
+router.get("/:id", obtener);
+router.get("/:id/cambios", obtenerCambios);
+router.post("/", atencionCliente, crear);
+router.put("/:id", organizacion, actualizar);
+router.patch("/:id/estado", organizacion, cambiarEstado);
+router.post("/:id/cancelar", organizacion, cancelar);
 
 export default router;
