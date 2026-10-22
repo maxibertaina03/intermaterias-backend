@@ -1,6 +1,7 @@
 -- =====================================================================
 -- Sistema de eventos (intermaterias) - Script de la base de datos
--- Versión 4: login con Clerk por usuario y contraseña (usuarios.clerk_user_id; email opcional).
+-- Versión 5: cada empresa con sus usuarios (super admin, rol admin_empresa, usuarios.usuario).
+-- (v4: login con Clerk por usuario y contraseña; usuarios.clerk_user_id; email opcional.)
 -- Crea toda la estructura desde cero y carga datos de prueba.
 -- Se puede ejecutar varias veces: primero borra todo.
 --
@@ -51,23 +52,29 @@ CREATE TABLE empresas (
     fecha_creacion TIMESTAMP DEFAULT NOW()
 );
 
--- Personal de la organizadora (los únicos que usan el sistema)
+-- Personal de la organizadora (los únicos que usan el sistema) y el super admin.
+-- El super admin administra las empresas y no pertenece a ninguna (id_empresa NULL).
 CREATE TABLE usuarios (
     id_usuario SERIAL PRIMARY KEY,
-    id_empresa INT NOT NULL,
+    id_empresa INT,
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(150),
-    clerk_user_id VARCHAR(64) UNIQUE,   -- cuenta de Clerk (se crea sola la primera vez que entra; las contraseñas las maneja Clerk)
+    usuario VARCHAR(64) UNIQUE,          -- nombre de usuario con el que entra (el mismo que en Clerk)
+    clerk_user_id VARCHAR(64) UNIQUE,    -- cuenta de Clerk (la crea el administrador; las contraseñas las maneja Clerk)
+    es_superadmin BOOLEAN NOT NULL DEFAULT FALSE,
     activo BOOLEAN DEFAULT TRUE,
     UNIQUE (id_empresa, email),
+    CONSTRAINT usuarios_empresa_o_superadmin CHECK (es_superadmin OR id_empresa IS NOT NULL),
     FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa)
 );
 
--- Roles de cada usuario: una persona puede tener varios
+-- Roles de cada usuario: una persona puede tener varios.
+-- admin_empresa da de alta a los usuarios de su empresa.
 CREATE TABLE usuario_roles (
     id_usuario INT NOT NULL,
     rol VARCHAR(30) NOT NULL
-        CHECK (rol IN ('atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')),
+        CONSTRAINT usuario_roles_rol_check
+        CHECK (rol IN ('admin_empresa', 'atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')),
     PRIMARY KEY (id_usuario, rol),
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
@@ -291,18 +298,23 @@ INSERT INTO empresas (nombre, cuit, email, telefono, direccion) VALUES
 
 -- Personal de prueba. Las personas que entran con Clerk se crean solas la primera vez
 -- (en la empresa CLERK_ID_EMPRESA con los roles de CLERK_ROLES).
-INSERT INTO usuarios (id_empresa, nombre, email) VALUES
-(1, 'Sofía Pereyra', 'sofia@eventosdelcentro.com'),   -- 1
-(1, 'Mateo Gómez', 'mateo@eventosdelcentro.com'),     -- 2
-(1, 'Valentina Ruiz', 'valen@eventosdelcentro.com'),  -- 3
-(2, 'Joaquín López', 'joaquin@fiestasnorte.com');     -- 4
+-- Las cuentas de Clerk de estos usuarios se crean con: npm run usuarios-demo
+INSERT INTO usuarios (id_empresa, nombre, email, usuario, es_superadmin) VALUES
+(1, 'Sofía Pereyra', 'sofia@eventosdelcentro.com', 'sofia', FALSE),      -- 1
+(1, 'Mateo Gómez', 'mateo@eventosdelcentro.com', 'mateo', FALSE),        -- 2
+(1, 'Valentina Ruiz', 'valen@eventosdelcentro.com', 'valentina', FALSE), -- 3
+(2, 'Joaquín López', 'joaquin@fiestasnorte.com', 'joaquin', FALSE),      -- 4
+(NULL, 'Administración del sistema', NULL, 'superadmin', TRUE);          -- 5 (super admin)
 
--- Roles: Sofía atiende y arma propuestas (dos roles), Mateo organiza, Valentina es integrante
+-- Roles: Sofía administra su empresa, atiende y arma propuestas; Mateo organiza; Valentina es integrante.
+-- Joaquín administra Fiestas Norte y hace todo.
 INSERT INTO usuario_roles (id_usuario, rol) VALUES
+(1, 'admin_empresa'),
 (1, 'atencion_cliente'),
 (1, 'responsable_propuesta'),
 (2, 'responsable_organizacion'),
 (3, 'integrante'),
+(4, 'admin_empresa'),
 (4, 'atencion_cliente'),
 (4, 'responsable_propuesta'),
 (4, 'responsable_organizacion');

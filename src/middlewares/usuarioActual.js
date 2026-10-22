@@ -1,25 +1,31 @@
-import { clerkClient, getAuth } from "@clerk/express";
+import { getAuth } from "@clerk/express";
 import pool from "../data/db.js";
 
 // Identifica a la persona que hace el pedido y deja sus datos en req.usuario:
-//   req.usuario = { id_usuario, id_empresa, nombre, email, roles: ["atencion_cliente", ...] }
+//   req.usuario = { id_usuario, id_empresa, empresa, nombre, email, usuario, es_superadmin,
+//                   roles: ["admin_empresa", "atencion_cliente", ...] }
 // TODAS las consultas de datos de una empresa filtran con req.usuario.id_empresa (multitenant).
+// El super admin no tiene empresa (id_empresa null): solo administra empresas.
 //
 // Dos modos:
 // - Con CLERK_SECRET_KEY en el .env → login real con Clerk (usuario y contraseña; el front manda el token).
+//   Solo entra quien tiene su usuario dado de alta (lo crea el administrador de su empresa).
 // - Sin Clerk → modo desarrollo: usa el usuario DEV_ID_USUARIO del .env.
 
 export const usaClerk = Boolean(process.env.CLERK_SECRET_KEY);
 
+// Un usuario de una empresa desactivada no entra; el super admin sí.
 const SELECT_USUARIO = `
-  SELECT u.id_usuario, u.id_empresa, u.nombre, u.email,
+  SELECT u.id_usuario, u.id_empresa, e.nombre AS empresa, u.nombre, u.email, u.usuario, u.es_superadmin,
          COALESCE(array_agg(r.rol) FILTER (WHERE r.rol IS NOT NULL), '{}') AS roles
     FROM usuarios u
+    LEFT JOIN empresas e ON e.id_empresa = u.id_empresa
     LEFT JOIN usuario_roles r ON r.id_usuario = u.id_usuario`;
+const ACTIVO = "u.activo AND (u.es_superadmin OR e.activo)";
 
 const buscarPorId = async (id_usuario) => {
   const { rows } = await pool.query(
-    `${SELECT_USUARIO} WHERE u.id_usuario = $1 AND u.activo GROUP BY u.id_usuario`,
+    `${SELECT_USUARIO} WHERE u.id_usuario = $1 AND ${ACTIVO} GROUP BY u.id_usuario, e.nombre`,
     [id_usuario]
   );
   return rows[0] ?? null;
@@ -27,48 +33,10 @@ const buscarPorId = async (id_usuario) => {
 
 const buscarPorClerk = async (clerk_user_id) => {
   const { rows } = await pool.query(
-    `${SELECT_USUARIO} WHERE u.clerk_user_id = $1 AND u.activo GROUP BY u.id_usuario`,
+    `${SELECT_USUARIO} WHERE u.clerk_user_id = $1 AND ${ACTIVO} GROUP BY u.id_usuario, e.nombre`,
     [clerk_user_id]
   );
   return rows[0] ?? null;
-};
-
-// Alta automática: la primera vez que alguien entra con Clerk se le crea su usuario
-// en la empresa por defecto (CLERK_ID_EMPRESA, por defecto 1) y con los roles de CLERK_ROLES
-// (por defecto, los 4). Los roles y la empresa se pueden cambiar después en la base.
-const ROLES_POR_DEFECTO = ["atencion_cliente", "responsable_propuesta", "responsable_organizacion", "integrante"];
-
-const crearDesdeClerk = async (clerk_user_id) => {
-  const u = await clerkClient.users.getUser(clerk_user_id);
-  const nombre = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "Usuario";
-  const email = u.primaryEmailAddress?.emailAddress ?? null;
-  const id_empresa = Number(process.env.CLERK_ID_EMPRESA || 1);
-  const roles = process.env.CLERK_ROLES ? process.env.CLERK_ROLES.split(",").map((r) => r.trim()) : ROLES_POR_DEFECTO;
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const { rows } = await client.query(
-      `INSERT INTO usuarios (id_empresa, nombre, email, clerk_user_id)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (clerk_user_id) DO NOTHING
-       RETURNING id_usuario`,
-      [id_empresa, nombre, email, clerk_user_id]
-    );
-    if (rows[0]) {
-      await client.query(
-        `INSERT INTO usuario_roles (id_usuario, rol) SELECT $1, unnest($2::varchar[])`,
-        [rows[0].id_usuario, roles]
-      );
-    }
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
-  return buscarPorClerk(clerk_user_id);
 };
 
 export const usuarioActual = async (req, res, next) => {
@@ -80,7 +48,7 @@ export const usuarioActual = async (req, res, next) => {
       if (!isAuthenticated) {
         return res.status(401).json({ mensaje: "Tenés que iniciar sesión" });
       }
-      usuario = (await buscarPorClerk(userId)) ?? (await crearDesdeClerk(userId));
+      usuario = await buscarPorClerk(userId);
     } else {
       if (!process.env.DEV_ID_USUARIO) {
         return res.status(401).json({ mensaje: "Tenés que iniciar sesión" });
@@ -89,7 +57,7 @@ export const usuarioActual = async (req, res, next) => {
     }
 
     if (!usuario) {
-      return res.status(403).json({ mensaje: "No tenés acceso al sistema" });
+      return res.status(403).json({ mensaje: "No tenés acceso al sistema. Pedile el alta al administrador de tu empresa." });
     }
     req.usuario = usuario;
     next();
