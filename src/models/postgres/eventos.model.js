@@ -83,6 +83,7 @@ const CAMPOS_SEGUIDOS = [
   { campo: "id_sede", descripcion: "Cambio de sede" },
   { campo: "cantidad_estimada", descripcion: "Cambio de cantidad estimada" },
 ];
+const ESTADOS_CERRADOS = ["realizado", "cancelado"];
 const ESTADOS_YA_EVENTO = ["confirmado", "en_preparacion", "realizado", "cancelado"];
 
 const sonDistintos = (a, b) => {
@@ -114,6 +115,11 @@ export const update = async (id_empresa, id_evento, datos, id_usuario) => {
     if (!actual) {
       await client.query("ROLLBACK");
       return { resultado: "no_encontrado" };
+    }
+    // Un evento cerrado (realizado o cancelado) ya no se edita
+    if (ESTADOS_CERRADOS.includes(actual.estado)) {
+      await client.query("ROLLBACK");
+      return { resultado: "cerrado" };
     }
 
     if (datos.id_tipo_evento !== undefined) {
@@ -234,12 +240,15 @@ export const cambiarEstado = async (id_empresa, id_evento, estado, observaciones
   }
 };
 
+// Se cancela un evento abierto: no uno ya cancelado, realizado o con la propuesta no aceptada.
+export const ESTADOS_NO_CANCELABLES = ["cancelado", "realizado", "no_aceptada"];
+
 export const cancelar = async (id_empresa, id_evento, motivo) => {
   const { rows } = await pool.query(
     `UPDATE eventos SET estado = 'cancelado', motivo_cancelacion = $1
-      WHERE id_evento = $2 AND id_empresa = $3 AND estado <> 'cancelado'
+      WHERE id_evento = $2 AND id_empresa = $3 AND NOT (estado = ANY($4::varchar[]))
      RETURNING *`,
-    [motivo, id_evento, id_empresa]
+    [motivo, id_evento, id_empresa, ESTADOS_NO_CANCELABLES]
   );
   return rows[0] ?? null;
 };
