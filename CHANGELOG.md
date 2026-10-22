@@ -7,6 +7,22 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.0.0] - 2026-10-22
+
+Cada empresa entra con sus propios usuarios y ve solo lo suyo, y los eventos tienen invitados con confirmación y pago. Es MAYOR porque cambia cómo se entra al sistema: las cuentas ya no se crean solas.
+
+### Agregado
+- **Cada empresa con sus usuarios**: el administrador de la empresa (rol `admin_empresa`) da de alta a su equipo con usuario, contraseña y roles (`/api/usuarios`).
+- **Super admin**: administra las empresas y crea el primer administrador de cada una (`POST /api/empresas/:id/admin`); no ve los datos de ninguna empresa.
+- Usuarios de ejemplo en Clerk con `npm run usuarios-demo`.
+- Base de datos v5 (migración `005-multiempresa.sql`).
+- **Invitados al evento**: link público por evento (`/api/publico/invitaciones/:token`) para que cada invitado responda sin iniciar sesión (asiste, medio de pago y comprobante opcional); gestión y verificación de pagos desde `/api/eventos/:id/invitados` (#41). Base de datos v6 (migración `006-invitados.sql`).
+- Modelo lógico v6 (`modelo-logico.png` y `modelo-logico.dbml`) generado desde `schema.sql`, con invitaciones, invitados y los cambios de usuarios.
+
+### Cambiado
+- **Ya no se crean cuentas solas**: quien entra con una cuenta de Clerk sin alta recibe "No tenés acceso". Los usuarios de una empresa desactivada tampoco entran.
+- `/api/empresas` requiere iniciar sesión como super admin (antes era pública).
+
 ## [1.0.1] - 2026-10-22
 
 ### Corregido
@@ -44,7 +60,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.1...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.0...develop
+[2.0.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.1...v2.0.0
 [1.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/maxibertaina03/intermaterias-backend/releases/tag/v0.1.0

@@ -1,6 +1,8 @@
 -- =====================================================================
 -- Sistema de eventos (intermaterias) - Script de la base de datos
--- Versión 4: login con Clerk por usuario y contraseña (usuarios.clerk_user_id; email opcional).
+-- Versión 6: invitados a los eventos (link público + comprobante).
+-- (v5: cada empresa con sus usuarios (super admin, rol admin_empresa, usuarios.usuario).
+--  v4: login con Clerk por usuario y contraseña; usuarios.clerk_user_id; email opcional.)
 -- Crea toda la estructura desde cero y carga datos de prueba.
 -- Se puede ejecutar varias veces: primero borra todo.
 --
@@ -15,6 +17,8 @@
 -- =====================================================================
 -- 1) DROP: en orden inverso a las dependencias
 -- =====================================================================
+DROP TABLE IF EXISTS invitados;
+DROP TABLE IF EXISTS invitaciones;
 DROP TABLE IF EXISTS cambios_evento;
 DROP TABLE IF EXISTS tareas;
 DROP TABLE IF EXISTS evento_servicios;
@@ -51,23 +55,29 @@ CREATE TABLE empresas (
     fecha_creacion TIMESTAMP DEFAULT NOW()
 );
 
--- Personal de la organizadora (los únicos que usan el sistema)
+-- Personal de la organizadora (los únicos que usan el sistema) y el super admin.
+-- El super admin administra las empresas y no pertenece a ninguna (id_empresa NULL).
 CREATE TABLE usuarios (
     id_usuario SERIAL PRIMARY KEY,
-    id_empresa INT NOT NULL,
+    id_empresa INT,
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(150),
-    clerk_user_id VARCHAR(64) UNIQUE,   -- cuenta de Clerk (se crea sola la primera vez que entra; las contraseñas las maneja Clerk)
+    usuario VARCHAR(64) UNIQUE,          -- nombre de usuario con el que entra (el mismo que en Clerk)
+    clerk_user_id VARCHAR(64) UNIQUE,    -- cuenta de Clerk (la crea el administrador; las contraseñas las maneja Clerk)
+    es_superadmin BOOLEAN NOT NULL DEFAULT FALSE,
     activo BOOLEAN DEFAULT TRUE,
     UNIQUE (id_empresa, email),
+    CONSTRAINT usuarios_empresa_o_superadmin CHECK (es_superadmin OR id_empresa IS NOT NULL),
     FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa)
 );
 
--- Roles de cada usuario: una persona puede tener varios
+-- Roles de cada usuario: una persona puede tener varios.
+-- admin_empresa da de alta a los usuarios de su empresa.
 CREATE TABLE usuario_roles (
     id_usuario INT NOT NULL,
     rol VARCHAR(30) NOT NULL
-        CHECK (rol IN ('atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')),
+        CONSTRAINT usuario_roles_rol_check
+        CHECK (rol IN ('admin_empresa', 'atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')),
     PRIMARY KEY (id_usuario, rol),
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
@@ -275,6 +285,38 @@ CREATE TABLE cambios_evento (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
+-- Invitación pública de un evento: un link por evento, que el centro comparte por WhatsApp
+CREATE TABLE invitaciones (
+    id_invitacion SERIAL PRIMARY KEY,
+    id_empresa INT NOT NULL,
+    id_evento INT NOT NULL UNIQUE,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    precio_por_invitado NUMERIC(12,2) NOT NULL CHECK (precio_por_invitado >= 0),
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_limite DATE,
+    fecha_creacion TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa),
+    FOREIGN KEY (id_evento) REFERENCES eventos(id_evento)
+);
+
+-- Cada invitado responde sin iniciar sesión: si asiste, con qué paga y el comprobante (opcional)
+CREATE TABLE invitados (
+    id_invitado SERIAL PRIMARY KEY,
+    id_invitacion INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    asiste BOOLEAN NOT NULL,
+    medio_pago VARCHAR(20) CHECK (medio_pago IN ('efectivo', 'transferencia')),
+    comprobante BYTEA,
+    comprobante_nombre VARCHAR(200),
+    comprobante_tipo VARCHAR(100),
+    pago_verificado BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_respuesta TIMESTAMP DEFAULT NOW(),
+    -- Si no asiste, no tiene sentido un medio de pago
+    CHECK (asiste OR medio_pago IS NULL),
+    FOREIGN KEY (id_invitacion) REFERENCES invitaciones(id_invitacion)
+);
+
 
 -- =====================================================================
 -- 3) INSERT: datos de prueba
@@ -291,18 +333,23 @@ INSERT INTO empresas (nombre, cuit, email, telefono, direccion) VALUES
 
 -- Personal de prueba. Las personas que entran con Clerk se crean solas la primera vez
 -- (en la empresa CLERK_ID_EMPRESA con los roles de CLERK_ROLES).
-INSERT INTO usuarios (id_empresa, nombre, email) VALUES
-(1, 'Sofía Pereyra', 'sofia@eventosdelcentro.com'),   -- 1
-(1, 'Mateo Gómez', 'mateo@eventosdelcentro.com'),     -- 2
-(1, 'Valentina Ruiz', 'valen@eventosdelcentro.com'),  -- 3
-(2, 'Joaquín López', 'joaquin@fiestasnorte.com');     -- 4
+-- Las cuentas de Clerk de estos usuarios se crean con: npm run usuarios-demo
+INSERT INTO usuarios (id_empresa, nombre, email, usuario, es_superadmin) VALUES
+(1, 'Sofía Pereyra', 'sofia@eventosdelcentro.com', 'sofia', FALSE),      -- 1
+(1, 'Mateo Gómez', 'mateo@eventosdelcentro.com', 'mateo', FALSE),        -- 2
+(1, 'Valentina Ruiz', 'valen@eventosdelcentro.com', 'valentina', FALSE), -- 3
+(2, 'Joaquín López', 'joaquin@fiestasnorte.com', 'joaquin', FALSE),      -- 4
+(NULL, 'Administración del sistema', NULL, 'superadmin', TRUE);          -- 5 (super admin)
 
--- Roles: Sofía atiende y arma propuestas (dos roles), Mateo organiza, Valentina es integrante
+-- Roles: Sofía administra su empresa, atiende y arma propuestas; Mateo organiza; Valentina es integrante.
+-- Joaquín administra Fiestas Norte y hace todo.
 INSERT INTO usuario_roles (id_usuario, rol) VALUES
+(1, 'admin_empresa'),
 (1, 'atencion_cliente'),
 (1, 'responsable_propuesta'),
 (2, 'responsable_organizacion'),
 (3, 'integrante'),
+(4, 'admin_empresa'),
 (4, 'atencion_cliente'),
 (4, 'responsable_propuesta'),
 (4, 'responsable_organizacion');
@@ -422,3 +469,14 @@ INSERT INTO tareas (id_empresa, id_evento, id_responsable, descripcion, fecha_pr
 INSERT INTO cambios_evento (id_evento, id_usuario, descripcion, valor_anterior, valor_nuevo) VALUES
 (1, 1, 'Cambio de fecha', '2027-03-13', '2027-03-20'),
 (1, 2, 'Cambio de cantidad estimada', '200', '220');
+
+-- Invitaciones: la Bienvenida 2027 (en preparación) con el link activo; Egresados Escuela Alberdi
+-- (confirmado, otra empresa) con el link vencido, para probar el 410
+INSERT INTO invitaciones (id_empresa, id_evento, token, precio_por_invitado, activa, fecha_limite) VALUES
+(1, 1, 'a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778', 8000.00, TRUE, '2027-03-15'),   -- 1
+(2, 7, 'ffeeddccbbaa00998877665544332211ffeeddccbbaa001', 6000.00, TRUE, '2026-10-01');  -- 2 (vencida)
+
+INSERT INTO invitados (id_invitacion, nombre, apellido, asiste, medio_pago, pago_verificado) VALUES
+(1, 'Camila', 'Soria', TRUE, 'transferencia', TRUE),
+(1, 'Benjamín', 'Acosta', TRUE, 'efectivo', FALSE),
+(1, 'Lola', 'Funes', FALSE, NULL, FALSE);

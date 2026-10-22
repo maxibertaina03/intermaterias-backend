@@ -6,6 +6,8 @@ import empresasRouter from "./routes/empresas.routes.js";
 import instanciaRouter from "./routes/instancia.routes.js";
 import { clerkMiddleware } from "@clerk/express";
 import { usaClerk, usuarioActual } from "./middlewares/usuarioActual.js";
+import { requireEmpresa, requireSuperAdmin } from "./middlewares/requireEmpresa.js";
+import usuariosRouter from "./routes/usuarios.routes.js";
 import meRouter from "./routes/me.routes.js";
 import clientesRouter from "./routes/clientes.routes.js";
 import eventosRouter from "./routes/eventos.routes.js";
@@ -17,6 +19,9 @@ import serviciosRouter from "./routes/servicios.routes.js";
 import proveedoresRouter from "./routes/proveedores.routes.js";
 import sedesRouter from "./routes/sedes.routes.js";
 import tiposEventoRouter from "./routes/tiposEvento.routes.js";
+import invitacionesRouter from "./routes/invitaciones.routes.js";
+import invitadosRouter from "./routes/invitados.routes.js";
+import invitadosPublicoRouter from "./routes/invitadosPublico.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,16 +35,24 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/api/empresas", empresasRouter);
 app.use("/api/instancia", instanciaRouter);
+// Rutas públicas (sin login) van acá, antes de usuarioActual. Ej.: /api/publico (invitados, Lucas)
+app.use("/api/publico/invitaciones", invitadosPublicoRouter);
 
 // ── Rutas que necesitan saber quién es el usuario (y de qué empresa) ──
 // Todas ya están montadas: cada uno completa su archivo de routes/ sin tocar este.
 if (usaClerk) app.use(clerkMiddleware());   // lee el token de Clerk que manda el front
 app.use("/api", usuarioActual);
 app.use("/api/me", meRouter);                                   // masita (login)
+app.use("/api/empresas", requireSuperAdmin, empresasRouter);    // solo el super admin
+
+// ── Datos de una empresa: el super admin no entra (no tiene empresa) ──
+app.use("/api", requireEmpresa);
+app.use("/api/usuarios", usuariosRouter);                       // masita (alta del equipo)
 app.use("/api/clientes", clientesRouter);                       // Lucas
 app.use("/api/eventos", eventosRouter);                         // Lucas
+app.use("/api/eventos", invitacionesRouter);                    // Lucas (invitación e invitados del evento)
+app.use("/api/invitados", invitadosRouter);                     // Lucas
 app.use("/api/propuestas", propuestasRouter);                   // Tomi
 app.use("/api/tareas", tareasRouter);                           // Tomi
 app.use("/api/pendientes", pendientesRouter);                   // Tomi

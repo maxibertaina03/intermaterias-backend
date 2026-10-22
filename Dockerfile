@@ -4,5 +4,6 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY src/ ./src/
 COPY database/ ./database/
+COPY scripts/ ./scripts/
 EXPOSE 3000
 CMD ["npm", "start"]
