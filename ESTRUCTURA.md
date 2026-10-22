@@ -23,20 +23,25 @@ Las tablas nuevas van **solo en Postgres**: los models se importan directo de `m
 
 ## El usuario y el multitenant (lo más importante)
 
-Toda ruta bajo `/api` (salvo `empresas` e `instancia`) pasa por `usuarioActual`, que deja:
+Toda ruta bajo `/api` (salvo `instancia` y las públicas de `/api/publico`) pasa por `usuarioActual`, que deja:
 
 ```js
-req.usuario = { id_usuario: 1, id_empresa: 1, nombre: "Sofía Pereyra", email: "…", roles: ["atencion_cliente", "responsable_propuesta"] }
+req.usuario = { id_usuario: 1, id_empresa: 1, empresa: "Eventos del Centro", nombre: "Sofía Pereyra", usuario: "sofia",
+                es_superadmin: false, roles: ["admin_empresa", "atencion_cliente", "responsable_propuesta"] }
 ```
+
+Después, `requireEmpresa` corta a quien no tiene empresa: el **super admin** solo usa `/api/me` y `/api/empresas`.
+Tu código no cambia: en tus rutas siempre hay un `req.usuario.id_empresa`.
 
 **Regla de oro:** toda consulta de datos de una empresa filtra por `req.usuario.id_empresa`, y todo
 INSERT lo pone. Nunca se toma el `id_empresa` del body ni de la URL. Así una organizadora jamás ve datos de otra.
 
 **Dos modos de login** (no cambia nada en tu código):
-- **Sin claves de Clerk** en el `.env` → modo desarrollo: `DEV_ID_USUARIO=1` (Sofía, de *Eventos del Centro*).
-  Otros roles: `2` = Mateo (organización), `3` = Valentina (integrante). Es lo más cómodo para programar.
-- **Con `CLERK_SECRET_KEY` y `CLERK_PUBLISHABLE_KEY`** → login real con **usuario y contraseña**. La primera vez que
-  alguien entra se le crea su usuario solo, en la empresa `CLERK_ID_EMPRESA` (1) y con los roles de `CLERK_ROLES` (los 4).
+- **Sin claves de Clerk** en el `.env` → modo desarrollo: `DEV_ID_USUARIO=1` (Sofía, de *Eventos del Centro*, administradora).
+  Otros: `2` = Mateo (organización), `3` = Valentina (integrante), `4` = Joaquín (*Fiestas Norte*), `5` = super admin.
+- **Con `CLERK_SECRET_KEY` y `CLERK_PUBLISHABLE_KEY`** → login real con **usuario y contraseña**. Solo entra quien
+  tiene su usuario dado de alta: lo crea el administrador de su empresa (o el super admin, el primero de cada empresa).
+  Usuarios de ejemplo en Clerk: `DEMO_PASSWORD='…' npm run usuarios-demo` (`superadmin`, `sofia`, `mateo`, `valentina`, `joaquin`).
 
 ## Ejemplo completo (un listado y un alta con multitenant)
 
@@ -154,11 +159,21 @@ Para `PUT /proveedores/:id/servicios`, el body es `{ "id_servicios": [1, 2] }`; 
 
 `GET /servicios-acordados?evento=ID` filtra por evento (sin el filtro devuelve los de la organizadora). `PUT /servicios-acordados/:id` acepta `es_propio`, `id_proveedor`, `id_responsable` y `observaciones`; los campos pueden actualizarse parcialmente. Un servicio propio no lleva proveedor. Cambiar el tipo de cumplimiento o el proveedor devuelve el estado a `pendiente`. La confirmación requiere que el evento esté confirmado o en preparación y, si el servicio es externo, que tenga asignado un proveedor activo que ofrezca ese servicio. Las rutas que modifican catálogos requieren `atencion_cliente`, `responsable_propuesta` o `responsable_organizacion`; las que modifican coordinación requieren `responsable_organizacion` o `integrante`.
 
-### masita · Login
-| Método y ruta | Qué hace |
-|---|---|
-| `GET /me` | Datos del usuario logueado y sus roles (ya existe) |
-| Middleware `usuarioActual` | Pasar de `DEV_ID_USUARIO` a Clerk |
+### masita · Login y usuarios
+| Método y ruta | Quién | Qué hace |
+|---|---|---|
+| `GET /me` | todos | Datos del usuario logueado (`req.usuario`, ver arriba) |
+| `GET /usuarios` | `admin_empresa` | Usuarios de mi empresa: `[{ id_usuario, nombre, email, usuario, activo, roles: [...] }]` |
+| `GET /usuarios/:id` | `admin_empresa` | Uno |
+| `POST /usuarios` | `admin_empresa` | Alta: `{ nombre, apellido?, email?, usuario, password, roles: [...] }` → 201 con el usuario. Crea la cuenta en Clerk |
+| `PUT /usuarios/:id` | `admin_empresa` | Cambia lo que venga: `{ nombre?, email?, activo?, roles? }` (los roles se reemplazan todos) |
+| `GET/POST/PUT/DELETE /empresas[/:id]` | super admin | CRUD de empresas |
+| `POST /empresas/:id/admin` | super admin | Primer administrador: `{ nombre, apellido?, usuario, password, roles? }` (por defecto, todos los roles) |
+
+Reglas de `/usuarios`: el usuario tiene 4 a 64 letras, números, `-` o `_` y no se repite (409 "Ese nombre de usuario ya existe");
+la contraseña, **15 caracteres o más** (lo exige Clerk, que además rechaza las filtradas; los mensajes llegan en castellano); al menos un rol de
+`admin_empresa`, `atencion_cliente`, `responsable_propuesta`, `responsable_organizacion`, `integrante`. Un administrador no puede
+desactivarse ni quitarse `admin_empresa` (409). Un usuario desactivado no puede volver a entrar.
 
 ## Reglas del negocio que valida la API
 
