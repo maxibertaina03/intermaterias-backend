@@ -341,13 +341,13 @@ No requiere cuenta. Cada respuesta indica si asiste y, si asiste, cómo paga. Pu
 | apellido | VARCHAR(100) | NOT NULL |
 | asiste | BOOLEAN | NOT NULL |
 | medio_pago | VARCHAR(20) | CHECK (medio_pago IN ('efectivo', 'transferencia')); NULL si no asiste |
-| comprobante | BYTEA | Opcional; archivo PDF, JPG o PNG (máximo 5 MB) |
+| comprobante | BYTEA | Opcional; archivo PDF, JPG o PNG (máximo 5 MB). Solo se guarda si asiste y paga por transferencia |
 | comprobante_nombre | VARCHAR(200) | Nombre original del archivo |
 | comprobante_tipo | VARCHAR(100) | MIME type del archivo |
 | pago_verificado | BOOLEAN | NOT NULL, DEFAULT FALSE |
 | fecha_respuesta | TIMESTAMP | DEFAULT NOW() |
 
-Regla: si `asiste` es falso, `medio_pago` debe ser NULL. El comprobante es opcional y el administrador puede marcar el pago como verificado.
+Regla: si `asiste` es falso, `medio_pago` debe ser NULL. El comprobante es opcional y solo se guarda con transferencia; atención al cliente u organización marcan el pago como verificado.
 
 ---
 

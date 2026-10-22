@@ -10,6 +10,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 ### Cambiado
 - Documentación de entidades y guía de uso actualizadas a v6: administración de usuarios por empresa e invitados públicos.
 - DER conceptual actualizado con los campos de v2 y las entidades de invitaciones e invitados.
+- `/api/publico` ahora limita los pedidos por IP (`express-rate-limit`), para que no se puedan cargar respuestas falsas de a montones.
+- El comprobante de un invitado se descarta si no asiste o paga en efectivo (antes quedaba guardado aunque no hiciera falta).
+
+### Corregido
+- El token de la invitación de ejemplo en `schema.sql` ya no es un valor fijo: se genera al cargar los datos, para que nunca sea el de una invitación real.
 
 ## [2.0.0] - 2026-10-22
 
