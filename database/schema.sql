@@ -471,10 +471,11 @@ INSERT INTO cambios_evento (id_evento, id_usuario, descripcion, valor_anterior, 
 (1, 2, 'Cambio de cantidad estimada', '200', '220');
 
 -- Invitaciones: la Bienvenida 2027 (en preparación) con el link activo; Egresados Escuela Alberdi
--- (confirmado, otra empresa) con el link vencido, para probar el 410
+-- (confirmado, otra empresa) con el link vencido, para probar el 410.
+-- El token se genera acá (no es un valor fijo): que el de la demo nunca sea el de una invitación real.
 INSERT INTO invitaciones (id_empresa, id_evento, token, precio_por_invitado, activa, fecha_limite) VALUES
-(1, 1, 'a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778', 8000.00, TRUE, '2027-03-15'),   -- 1
-(2, 7, 'ffeeddccbbaa00998877665544332211ffeeddccbbaa001', 6000.00, TRUE, '2026-10-01');  -- 2 (vencida)
+(1, 1, md5(random()::text || clock_timestamp()::text) || md5(random()::text || clock_timestamp()::text), 8000.00, TRUE, '2027-03-15'),   -- 1
+(2, 7, md5(random()::text || clock_timestamp()::text) || md5(random()::text || clock_timestamp()::text), 6000.00, TRUE, '2026-10-01');  -- 2 (vencida)
 
 INSERT INTO invitados (id_invitacion, nombre, apellido, asiste, medio_pago, pago_verificado) VALUES
 (1, 'Camila', 'Soria', TRUE, 'transferencia', TRUE),
