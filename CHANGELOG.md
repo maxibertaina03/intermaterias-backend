@@ -7,7 +7,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
-## [1.0.0] - en preparación
+## [1.0.0] - 2026-10-22
 
 Primera versión completa: el recorrido de un evento, desde la solicitud hasta el cierre, con login.
 
