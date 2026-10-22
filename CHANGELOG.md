@@ -18,7 +18,12 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - **Ya no se crean cuentas solas**: quien entra con una cuenta de Clerk sin alta recibe "No tenés acceso". Los usuarios de una empresa desactivada tampoco entran.
 - `/api/empresas` requiere iniciar sesión como super admin (antes era pública).
 
-## [1.0.0] - en preparación
+## [1.0.1] - 2026-10-22
+
+### Corregido
+- En Docker las fechas (evento, tareas, vencimientos, fecha límite) se mostraban **un día antes**: la API ahora las devuelve como `AAAA-MM-DD`, sin zona horaria.
+
+## [1.0.0] - 2026-10-22
 
 Primera versión completa: el recorrido de un evento, desde la solicitud hasta el cierre, con login.
 
@@ -50,6 +55,7 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.1...develop
+[1.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/maxibertaina03/intermaterias-backend/releases/tag/v0.1.0
