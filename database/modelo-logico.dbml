@@ -1,4 +1,4 @@
-// Modelo lógico de la base (v4), generado desde database/schema.sql con @dbml/cli (sql2dbml).
+// Modelo lógico de la base (v6), generado desde database/schema.sql con @dbml/cli (sql2dbml).
 // Para actualizar el diagrama de dbdiagram.io: pegar este archivo en el editor y exportar modelo-logico.png.
 // Las restricciones CHECK quedan como notas (están completas en schema.sql).
 
@@ -15,11 +15,15 @@ Table "empresas" {
 
 Table "usuarios" {
   "id_usuario" SERIAL [pk, increment]
-  "id_empresa" INT [not null]
+  "id_empresa" INT
   "nombre" VARCHAR(100) [not null]
   "email" VARCHAR(150)
+  "usuario" VARCHAR(64) [unique]
   "clerk_user_id" VARCHAR(64) [unique]
+  "es_superadmin" BOOLEAN [not null, default: false]
   "activo" BOOLEAN [default: true]
+
+  Note: '''Reglas: es_superadmin OR id_empresa IS NOT NULL'''
 
   Indexes {
     (id_empresa, email) [unique]
@@ -28,7 +32,7 @@ Table "usuarios" {
 
 Table "usuario_roles" {
   "id_usuario" INT [not null]
-  "rol" VARCHAR(30) [not null, note: '''CHECK rol IN ('atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')''']
+  "rol" VARCHAR(30) [not null, note: '''CHECK rol IN ('admin_empresa', 'atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')''']
 
   Indexes {
     (id_usuario, rol) [pk]
@@ -202,6 +206,33 @@ Table "cambios_evento" {
   "valor_nuevo" TEXT
 }
 
+Table "invitaciones" {
+  "id_invitacion" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "id_evento" INT [unique, not null]
+  "token" VARCHAR(64) [unique, not null]
+  "precio_por_invitado" NUMERIC(12,2) [not null, note: '''CHECK precio_por_invitado >= 0''']
+  "activa" BOOLEAN [not null, default: true]
+  "fecha_limite" DATE
+  "fecha_creacion" TIMESTAMP [default: `NOW()`]
+}
+
+Table "invitados" {
+  "id_invitado" SERIAL [pk, increment]
+  "id_invitacion" INT [not null]
+  "nombre" VARCHAR(100) [not null]
+  "apellido" VARCHAR(100) [not null]
+  "asiste" BOOLEAN [not null]
+  "medio_pago" VARCHAR(20) [note: '''CHECK medio_pago IN ('efectivo', 'transferencia')''']
+  "comprobante" BYTEA
+  "comprobante_nombre" VARCHAR(200)
+  "comprobante_tipo" VARCHAR(100)
+  "pago_verificado" BOOLEAN [not null, default: false]
+  "fecha_respuesta" TIMESTAMP [default: `NOW()`]
+
+  Note: '''Reglas: asiste OR medio_pago IS NULL'''
+}
+
 Ref:"empresas"."id_empresa" < "usuarios"."id_empresa"
 
 Ref:"usuarios"."id_usuario" < "usuario_roles"."id_usuario"
@@ -265,4 +296,10 @@ Ref:"usuarios"."id_usuario" < "tareas"."id_responsable"
 Ref:"eventos"."id_evento" < "cambios_evento"."id_evento"
 
 Ref:"usuarios"."id_usuario" < "cambios_evento"."id_usuario"
+
+Ref:"empresas"."id_empresa" < "invitaciones"."id_empresa"
+
+Ref:"eventos"."id_evento" - "invitaciones"."id_evento"
+
+Ref:"invitaciones"."id_invitacion" < "invitados"."id_invitacion"
 
