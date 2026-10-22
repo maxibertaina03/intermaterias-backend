@@ -12,6 +12,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - **Super admin**: administra las empresas y crea el primer administrador de cada una (`POST /api/empresas/:id/admin`); no ve los datos de ninguna empresa.
 - Usuarios de ejemplo en Clerk con `npm run usuarios-demo`.
 - Base de datos v5 (migración `005-multiempresa.sql`).
+- **Invitados al evento**: link público por evento (`/api/publico/invitaciones/:token`) para que cada invitado responda sin iniciar sesión (asiste, medio de pago y comprobante opcional); gestión y verificación de pagos desde `/api/eventos/:id/invitados` (#41). Base de datos v6 (migración `006-invitados.sql`).
 
 ### Cambiado
 - **Ya no se crean cuentas solas**: quien entra con una cuenta de Clerk sin alta recibe "No tenés acceso". Los usuarios de una empresa desactivada tampoco entran.

@@ -19,6 +19,9 @@ import serviciosRouter from "./routes/servicios.routes.js";
 import proveedoresRouter from "./routes/proveedores.routes.js";
 import sedesRouter from "./routes/sedes.routes.js";
 import tiposEventoRouter from "./routes/tiposEvento.routes.js";
+import invitacionesRouter from "./routes/invitaciones.routes.js";
+import invitadosRouter from "./routes/invitados.routes.js";
+import invitadosPublicoRouter from "./routes/invitadosPublico.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +37,7 @@ app.use((req, res, next) => {
 
 app.use("/api/instancia", instanciaRouter);
 // Rutas públicas (sin login) van acá, antes de usuarioActual. Ej.: /api/publico (invitados, Lucas)
+app.use("/api/publico/invitaciones", invitadosPublicoRouter);
 
 // ── Rutas que necesitan saber quién es el usuario (y de qué empresa) ──
 // Todas ya están montadas: cada uno completa su archivo de routes/ sin tocar este.
@@ -47,6 +51,8 @@ app.use("/api", requireEmpresa);
 app.use("/api/usuarios", usuariosRouter);                       // masita (alta del equipo)
 app.use("/api/clientes", clientesRouter);                       // Lucas
 app.use("/api/eventos", eventosRouter);                         // Lucas
+app.use("/api/eventos", invitacionesRouter);                    // Lucas (invitación e invitados del evento)
+app.use("/api/invitados", invitadosRouter);                     // Lucas
 app.use("/api/propuestas", propuestasRouter);                   // Tomi
 app.use("/api/tareas", tareasRouter);                           // Tomi
 app.use("/api/pendientes", pendientesRouter);                   // Tomi

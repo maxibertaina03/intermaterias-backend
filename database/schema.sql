@@ -1,7 +1,8 @@
 -- =====================================================================
 -- Sistema de eventos (intermaterias) - Script de la base de datos
--- Versión 5: cada empresa con sus usuarios (super admin, rol admin_empresa, usuarios.usuario).
--- (v4: login con Clerk por usuario y contraseña; usuarios.clerk_user_id; email opcional.)
+-- Versión 6: invitados a los eventos (link público + comprobante).
+-- (v5: cada empresa con sus usuarios (super admin, rol admin_empresa, usuarios.usuario).
+--  v4: login con Clerk por usuario y contraseña; usuarios.clerk_user_id; email opcional.)
 -- Crea toda la estructura desde cero y carga datos de prueba.
 -- Se puede ejecutar varias veces: primero borra todo.
 --
@@ -16,6 +17,8 @@
 -- =====================================================================
 -- 1) DROP: en orden inverso a las dependencias
 -- =====================================================================
+DROP TABLE IF EXISTS invitados;
+DROP TABLE IF EXISTS invitaciones;
 DROP TABLE IF EXISTS cambios_evento;
 DROP TABLE IF EXISTS tareas;
 DROP TABLE IF EXISTS evento_servicios;
@@ -282,6 +285,38 @@ CREATE TABLE cambios_evento (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
+-- Invitación pública de un evento: un link por evento, que el centro comparte por WhatsApp
+CREATE TABLE invitaciones (
+    id_invitacion SERIAL PRIMARY KEY,
+    id_empresa INT NOT NULL,
+    id_evento INT NOT NULL UNIQUE,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    precio_por_invitado NUMERIC(12,2) NOT NULL CHECK (precio_por_invitado >= 0),
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_limite DATE,
+    fecha_creacion TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa),
+    FOREIGN KEY (id_evento) REFERENCES eventos(id_evento)
+);
+
+-- Cada invitado responde sin iniciar sesión: si asiste, con qué paga y el comprobante (opcional)
+CREATE TABLE invitados (
+    id_invitado SERIAL PRIMARY KEY,
+    id_invitacion INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    asiste BOOLEAN NOT NULL,
+    medio_pago VARCHAR(20) CHECK (medio_pago IN ('efectivo', 'transferencia')),
+    comprobante BYTEA,
+    comprobante_nombre VARCHAR(200),
+    comprobante_tipo VARCHAR(100),
+    pago_verificado BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_respuesta TIMESTAMP DEFAULT NOW(),
+    -- Si no asiste, no tiene sentido un medio de pago
+    CHECK (asiste OR medio_pago IS NULL),
+    FOREIGN KEY (id_invitacion) REFERENCES invitaciones(id_invitacion)
+);
+
 
 -- =====================================================================
 -- 3) INSERT: datos de prueba
@@ -434,3 +469,14 @@ INSERT INTO tareas (id_empresa, id_evento, id_responsable, descripcion, fecha_pr
 INSERT INTO cambios_evento (id_evento, id_usuario, descripcion, valor_anterior, valor_nuevo) VALUES
 (1, 1, 'Cambio de fecha', '2027-03-13', '2027-03-20'),
 (1, 2, 'Cambio de cantidad estimada', '200', '220');
+
+-- Invitaciones: la Bienvenida 2027 (en preparación) con el link activo; Egresados Escuela Alberdi
+-- (confirmado, otra empresa) con el link vencido, para probar el 410
+INSERT INTO invitaciones (id_empresa, id_evento, token, precio_por_invitado, activa, fecha_limite) VALUES
+(1, 1, 'a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778', 8000.00, TRUE, '2027-03-15'),   -- 1
+(2, 7, 'ffeeddccbbaa00998877665544332211ffeeddccbbaa001', 6000.00, TRUE, '2026-10-01');  -- 2 (vencida)
+
+INSERT INTO invitados (id_invitacion, nombre, apellido, asiste, medio_pago, pago_verificado) VALUES
+(1, 'Camila', 'Soria', TRUE, 'transferencia', TRUE),
+(1, 'Benjamín', 'Acosta', TRUE, 'efectivo', FALSE),
+(1, 'Lola', 'Funes', FALSE, NULL, FALSE);
