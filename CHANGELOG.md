@@ -7,6 +7,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+### Cambiado
+- Documentación de entidades y guía de uso actualizadas a v6: administración de usuarios por empresa e invitados públicos.
+- DER conceptual actualizado con los campos de v2 y las entidades de invitaciones e invitados.
+
 ## [2.0.0] - 2026-10-22
 
 Cada empresa entra con sus propios usuarios y ve solo lo suyo, y los eventos tienen invitados con confirmación y pago. Es MAYOR porque cambia cómo se entra al sistema: las cuentas ya no se crean solas.

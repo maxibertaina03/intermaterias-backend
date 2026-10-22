@@ -1,7 +1,6 @@
 # Intermaterias — Backend
 
-API del sistema de eventos (multitenant) hecha con **Node.js + Express + PostgreSQL**.
-Por ahora tiene el CRUD de `empresas`.
+API v2 del sistema de eventos (multitenant) hecha con **Node.js + Express + PostgreSQL**. Incluye gestión de empresas y usuarios, el ciclo de eventos y la confirmación pública de invitados.
 
 **Dominio:** una **empresa que organiza eventos para centros de estudiantes** (por ejemplo, la fiesta
 de bienvenida): solicitud, propuesta, confirmación, proveedores, tareas y cierre. La base es
@@ -26,9 +25,7 @@ cp .env.example .env     # completar con tus datos de PostgreSQL
 
 ### Base de datos
 
-La base del grupo está en **[Neon](https://neon.tech)** (PostgreSQL en la nube), así que todos usamos
-la misma, con la tabla `empresas` ya creada. Los datos de conexión (`DB_HOST`, `DB_PASSWORD`, etc.)
-se pasan **por privado**: completalos en tu `.env` con `DB_SSL=true`. Nunca los subas al repo.
+Completá los datos de conexión (`DB_HOST`, `DB_PASSWORD`, etc.) en tu `.env`. Los datos de la base compartida se pasan **por privado**; nunca los subas al repo. Para una instalación nueva, creá la base y ejecutá `database/schema.sql` (borra y vuelve a crear todas las tablas). Para actualizar una base existente, aplicá en orden las migraciones que le falten; las migraciones 005 y 006 llevan v4 a v6.
 
 **Base local (opcional, para hacer pruebas sin tocar la compartida):** poné `DB_HOST=localhost` y
 `DB_SSL=false` en el `.env`, y creá la base con alguna de estas opciones:
@@ -56,9 +53,23 @@ npm start       # producción
 
 El servidor queda en `http://localhost:3000`.
 
+## Guía de uso v2
+
+### Login por empresa
+
+El ingreso real se hace con **usuario y contraseña mediante Clerk**. Configurá `CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY` en el backend, y `VITE_CLERK_PUBLISHABLE_KEY` en el front. No hay registro público: el super admin inicia sesión como `superadmin`, crea la empresa y da de alta a su primer administrador. Desde entonces, `admin_empresa` crea y administra las cuentas de su propio equipo en **Usuarios**. Cada persona usa el nombre de usuario que le asignaron; los datos y permisos quedan limitados a su empresa. Las contraseñas las administra Clerk y deben tener al menos 15 caracteres.
+
+Para desarrollo local, si no configurás claves de Clerk, indicá en el backend `DEV_ID_USUARIO=1` (Sofía, administradora de Eventos del Centro). `DEV_ID_USUARIO=5` simula el super admin. El esquema de prueba incluye también los usuarios 2, 3 y 4. Con Clerk activo, `DEMO_PASSWORD='una-clave-de-15-caracteres-o-mas' npm run usuarios-demo` crea las cuentas de ejemplo.
+
+### Invitados
+
+Cuando el evento está confirmado o en preparación, el equipo puede crear o actualizar su invitación e indicar el precio por persona y, opcionalmente, una fecha límite. Compartí con el centro el link público que contiene el token. Cada invitado lo abre sin iniciar sesión e informa nombre, apellido y si asiste; si asiste, elige efectivo o transferencia y puede adjuntar el comprobante (PDF, JPG o PNG de hasta 5 MB). El equipo consulta las respuestas, descarga comprobantes y marca los pagos verificados desde el evento. Una invitación inactiva o vencida no acepta respuestas.
+
+Los endpoints y cuerpos completos están en [ESTRUCTURA.md](ESTRUCTURA.md); el esquema y las reglas de cada tabla, en [database/entidades.md](database/entidades.md).
+
 ## Endpoints
 
-Todas bajo `/api/empresas`:
+La tabla siguiente resume las operaciones de empresas; los endpoints de usuarios e invitados están en [ESTRUCTURA.md](ESTRUCTURA.md).
 
 | Método | Ruta | Acción | Respuesta |
 |--------|------|--------|-----------|
