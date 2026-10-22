@@ -129,6 +129,25 @@ Todos bajo `/api`. Los nombres de campos son los de `database/entidades.md`.
 | `GET /eventos/:id/cambios` | Historial de cambios |
 | `PATCH /eventos/:id/estado` | `falta_informacion`, `en_preparacion`, `realizado` (con observaciones) |
 | `POST /eventos/:id/cancelar` | Cancelar con **motivo obligatorio** |
+| `POST /eventos/:id/invitacion` | Crea o actualiza el link de invitados del evento (solo si está `confirmado` o `en_preparacion`) |
+| `GET /eventos/:id/invitados` | Invitados que respondieron, con totales |
+| `PATCH /invitados/:id/verificar` | Marca el pago de un invitado como verificado |
+| `GET /invitados/:id/comprobante` | Descarga el comprobante que subió el invitado |
+| `GET /publico/invitaciones/:token` · `POST /publico/invitaciones/:token/respuestas` | **Públicas, sin login**: el invitado consulta el evento y responde (ver abajo) |
+
+**Invitados** (link público por evento): `POST /eventos/:id/invitacion` recibe `{ precio_por_invitado, fecha_limite?, activa? }`
+(`activa` por defecto `true`) y devuelve la invitación completa, con el `token` para armar el link del front (`/invitacion/:token`).
+`GET /eventos/:id/invitados` devuelve `{ invitacion, invitados: [...], totales: { van, no_van, a_cobrar, verificados } }`
+(si todavía no se generó el link, `invitacion` es `null` y el resto queda en cero); cada invitado trae
+`{ id_invitado, nombre, apellido, asiste, medio_pago, pago_verificado, fecha_respuesta, comprobante_nombre, comprobante_tipo, tiene_comprobante }`,
+sin el archivo. `PATCH /invitados/:id/verificar` no recibe body. `GET /invitados/:id/comprobante` devuelve el archivo con su
+`Content-Type` (404 si no tiene).
+
+Del lado público, `GET /publico/invitaciones/:token` devuelve `{ evento, fecha, hora_inicio, sede, precio_por_invitado, fecha_limite }`
+(404 si el token no existe, 410 si la invitación está inactiva o venció). `POST /publico/invitaciones/:token/respuestas` es
+`multipart/form-data` con campos `nombre`, `apellido`, `asiste` (`"true"`/`"false"`), `medio_pago` (`"efectivo"` o `"transferencia"`,
+solo si asiste) y un archivo opcional `comprobante` (PDF, JPG o PNG, hasta 5 MB); devuelve el invitado creado (sin el archivo) o 400/410
+si no cumple las condiciones.
 
 ### Tomi · Propuestas, tareas y pendientes
 | Método y ruta | Qué hace |
