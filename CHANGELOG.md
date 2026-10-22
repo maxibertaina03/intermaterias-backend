@@ -27,6 +27,7 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - `DB_CLIENT=mongo` para usar MongoDB Atlas en la tabla de empresas (demo de Sistemas Operativos).
 
 ### Corregido
+- En Docker las fechas (evento, tareas, vencimientos) se mostraban un día antes: la API ahora las devuelve como `AAAA-MM-DD`, sin zona horaria.
 - Un evento realizado o con la propuesta no aceptada ya no se puede cancelar, y uno realizado o cancelado ya no se puede editar (#37).
 - El modelo lógico (`modelo-logico.png`) ahora coincide con la base v4: `usuarios.clerk_user_id` y `email` opcional; se suma `modelo-logico.dbml` (#38).
 - Un evento en `falta_informacion` quedaba trabado: ahora se puede presentar su propuesta (#39).
