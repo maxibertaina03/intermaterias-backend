@@ -1,0 +1,268 @@
+// Modelo lógico de la base (v4), generado desde database/schema.sql con @dbml/cli (sql2dbml).
+// Para actualizar el diagrama de dbdiagram.io: pegar este archivo en el editor y exportar modelo-logico.png.
+// Las restricciones CHECK quedan como notas (están completas en schema.sql).
+
+Table "empresas" {
+  "id_empresa" SERIAL [pk, increment]
+  "nombre" VARCHAR(150) [not null]
+  "cuit" VARCHAR(13) [unique, not null]
+  "email" VARCHAR(150)
+  "telefono" VARCHAR(30)
+  "direccion" VARCHAR(200)
+  "activo" BOOLEAN [default: true]
+  "fecha_creacion" TIMESTAMP [default: `NOW()`]
+}
+
+Table "usuarios" {
+  "id_usuario" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "nombre" VARCHAR(100) [not null]
+  "email" VARCHAR(150)
+  "clerk_user_id" VARCHAR(64) [unique]
+  "activo" BOOLEAN [default: true]
+
+  Indexes {
+    (id_empresa, email) [unique]
+  }
+}
+
+Table "usuario_roles" {
+  "id_usuario" INT [not null]
+  "rol" VARCHAR(30) [not null, note: '''CHECK rol IN ('atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')''']
+
+  Indexes {
+    (id_usuario, rol) [pk]
+  }
+}
+
+Table "clientes" {
+  "id_cliente" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "nombre" VARCHAR(150) [not null]
+  "tipo" VARCHAR(30) [not null, note: '''CHECK tipo IN ('centro_estudiantes', 'grupo_estudiantes', 'curso')''']
+  "institucion" VARCHAR(150)
+  "activo" BOOLEAN [default: true]
+}
+
+Table "contactos" {
+  "id_contacto" SERIAL [pk, increment]
+  "id_cliente" INT [not null]
+  "nombre" VARCHAR(100) [not null]
+  "telefono" VARCHAR(30)
+  "email" VARCHAR(150)
+  "rol" VARCHAR(80)
+  "vigente" BOOLEAN [default: true]
+}
+
+Table "cursos" {
+  "id_curso" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "id_cliente" INT
+  "nombre" VARCHAR(30) [not null]
+  "anio" SMALLINT [note: '''CHECK anio BETWEEN 1 AND 7''']
+  "division" VARCHAR(5)
+}
+
+Table "tipos_evento" {
+  "id_tipo_evento" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "nombre" VARCHAR(80) [not null]
+
+  Indexes {
+    (id_empresa, nombre) [unique]
+  }
+}
+
+Table "sedes" {
+  "id_sede" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "nombre" VARCHAR(150) [not null]
+  "direccion" VARCHAR(200)
+  "capacidad" INT [note: '''CHECK capacidad > 0''']
+}
+
+Table "servicios" {
+  "id_servicio" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "nombre" VARCHAR(100) [not null]
+  "descripcion" TEXT
+  "precio_referencia" NUMERIC(12,2) [note: '''CHECK precio_referencia >= 0''']
+  "activo" BOOLEAN [default: true]
+
+  Indexes {
+    (id_empresa, nombre) [unique]
+  }
+}
+
+Table "proveedores" {
+  "id_proveedor" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "nombre" VARCHAR(150) [not null]
+  "contacto_nombre" VARCHAR(100)
+  "telefono" VARCHAR(30)
+  "email" VARCHAR(150)
+  "observaciones" TEXT
+  "activo" BOOLEAN [default: true]
+}
+
+Table "proveedor_servicios" {
+  "id_proveedor" INT [not null]
+  "id_servicio" INT [not null]
+
+  Indexes {
+    (id_proveedor, id_servicio) [pk]
+  }
+}
+
+Table "eventos" {
+  "id_evento" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "id_cliente" INT [not null]
+  "id_contacto" INT
+  "id_tipo_evento" INT [not null]
+  "id_sede" INT
+  "nombre" VARCHAR(150) [not null]
+  "fecha" DATE [not null]
+  "hora_inicio" TIME
+  "cantidad_estimada" INT [not null, note: '''CHECK cantidad_estimada > 0''']
+  "necesidades" TEXT
+  "estado" VARCHAR(20) [not null, note: '''CHECK estado IN ('recibida', 'falta_informacion', 'propuesta_enviada', 'confirmado', 'en_preparacion', 'realizado', 'no_aceptada', 'cancelado')''', default: 'recibida']
+  "motivo_cancelacion" TEXT
+  "observaciones_cierre" TEXT
+  "fecha_creacion" TIMESTAMP [default: `NOW()`]
+
+  Note: '''Reglas: estado <> 'cancelado' OR motivo_cancelacion IS NOT NULL'''
+}
+
+Table "evento_cursos" {
+  "id_evento" INT [not null]
+  "id_curso" INT [not null]
+  "cantidad_estimada" INT [not null, note: '''CHECK cantidad_estimada > 0''']
+
+  Indexes {
+    (id_evento, id_curso) [pk]
+  }
+}
+
+Table "propuestas" {
+  "id_propuesta" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "id_evento" INT [unique, not null]
+  "estado" VARCHAR(20) [not null, note: '''CHECK estado IN ('en_preparacion', 'presentada', 'aceptada', 'rechazada', 'vencida')''', default: 'en_preparacion']
+  "descuento" NUMERIC(12,2) [not null, note: '''CHECK descuento >= 0''', default: 0]
+  "condiciones" TEXT
+  "motivo_rechazo" TEXT
+  "fecha_presentacion" TIMESTAMP
+  "vigencia_dias" SMALLINT [not null, note: '''CHECK vigencia_dias > 0''', default: 15]
+  "fecha_respuesta" TIMESTAMP
+  "fecha_actualizacion" TIMESTAMP [default: `NOW()`]
+
+  Note: '''Reglas: estado = 'en_preparacion' OR fecha_presentacion IS NOT NULL'''
+}
+
+Table "propuesta_items" {
+  "id_item" SERIAL [pk, increment]
+  "id_propuesta" INT [not null]
+  "id_servicio" INT [not null]
+  "descripcion" VARCHAR(200)
+  "cantidad" INT [not null, note: '''CHECK cantidad > 0''', default: 1]
+  "precio_unitario" NUMERIC(12,2) [not null, note: '''CHECK precio_unitario >= 0''']
+}
+
+Table "evento_servicios" {
+  "id_evento_servicio" SERIAL [pk, increment]
+  "id_evento" INT [not null]
+  "id_servicio" INT [not null]
+  "es_propio" BOOLEAN [not null, default: false]
+  "id_proveedor" INT
+  "id_responsable" INT
+  "estado" VARCHAR(20) [not null, note: '''CHECK estado IN ('pendiente', 'confirmado')''', default: 'pendiente']
+  "observaciones" TEXT
+
+  Note: '''Reglas: NOT es_propio OR id_proveedor IS NULL'''
+}
+
+Table "tareas" {
+  "id_tarea" SERIAL [pk, increment]
+  "id_empresa" INT [not null]
+  "id_evento" INT [not null]
+  "id_responsable" INT
+  "descripcion" VARCHAR(200) [not null]
+  "fecha_prevista" DATE
+  "estado" VARCHAR(20) [not null, note: '''CHECK estado IN ('pendiente', 'en_curso', 'hecha')''', default: 'pendiente']
+}
+
+Table "cambios_evento" {
+  "id_cambio" SERIAL [pk, increment]
+  "id_evento" INT [not null]
+  "id_usuario" INT [not null]
+  "fecha" TIMESTAMP [not null, default: `NOW()`]
+  "descripcion" VARCHAR(200) [not null]
+  "valor_anterior" TEXT
+  "valor_nuevo" TEXT
+}
+
+Ref:"empresas"."id_empresa" < "usuarios"."id_empresa"
+
+Ref:"usuarios"."id_usuario" < "usuario_roles"."id_usuario"
+
+Ref:"empresas"."id_empresa" < "clientes"."id_empresa"
+
+Ref:"clientes"."id_cliente" < "contactos"."id_cliente"
+
+Ref:"empresas"."id_empresa" < "cursos"."id_empresa"
+
+Ref:"clientes"."id_cliente" < "cursos"."id_cliente"
+
+Ref:"empresas"."id_empresa" < "tipos_evento"."id_empresa"
+
+Ref:"empresas"."id_empresa" < "sedes"."id_empresa"
+
+Ref:"empresas"."id_empresa" < "servicios"."id_empresa"
+
+Ref:"empresas"."id_empresa" < "proveedores"."id_empresa"
+
+Ref:"proveedores"."id_proveedor" < "proveedor_servicios"."id_proveedor"
+
+Ref:"servicios"."id_servicio" < "proveedor_servicios"."id_servicio"
+
+Ref:"empresas"."id_empresa" < "eventos"."id_empresa"
+
+Ref:"clientes"."id_cliente" < "eventos"."id_cliente"
+
+Ref:"contactos"."id_contacto" < "eventos"."id_contacto"
+
+Ref:"tipos_evento"."id_tipo_evento" < "eventos"."id_tipo_evento"
+
+Ref:"sedes"."id_sede" < "eventos"."id_sede"
+
+Ref:"eventos"."id_evento" < "evento_cursos"."id_evento"
+
+Ref:"cursos"."id_curso" < "evento_cursos"."id_curso"
+
+Ref:"empresas"."id_empresa" < "propuestas"."id_empresa"
+
+Ref:"eventos"."id_evento" - "propuestas"."id_evento"
+
+Ref:"propuestas"."id_propuesta" < "propuesta_items"."id_propuesta"
+
+Ref:"servicios"."id_servicio" < "propuesta_items"."id_servicio"
+
+Ref:"eventos"."id_evento" < "evento_servicios"."id_evento"
+
+Ref:"servicios"."id_servicio" < "evento_servicios"."id_servicio"
+
+Ref:"proveedores"."id_proveedor" < "evento_servicios"."id_proveedor"
+
+Ref:"usuarios"."id_usuario" < "evento_servicios"."id_responsable"
+
+Ref:"empresas"."id_empresa" < "tareas"."id_empresa"
+
+Ref:"eventos"."id_evento" < "tareas"."id_evento"
+
+Ref:"usuarios"."id_usuario" < "tareas"."id_responsable"
+
+Ref:"eventos"."id_evento" < "cambios_evento"."id_evento"
+
+Ref:"usuarios"."id_usuario" < "cambios_evento"."id_usuario"
+

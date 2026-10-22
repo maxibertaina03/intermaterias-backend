@@ -114,6 +114,9 @@ export const actualizar = async (req, res) => {
     };
     const resultado = await Eventos.update(req.usuario.id_empresa, id, datos, req.usuario.id_usuario);
     if (resultado.resultado === "no_encontrado") return res.status(404).json({ mensaje: "Evento no encontrado" });
+    if (resultado.resultado === "cerrado") {
+      return res.status(409).json({ mensaje: "Un evento realizado o cancelado ya no se puede editar" });
+    }
     if (resultado.resultado === "datos_invalidos") {
       return res.status(400).json({ mensaje: "Revisá el contacto, el tipo de evento o la sede" });
     }
@@ -169,7 +172,12 @@ export const cancelar = async (req, res) => {
     if (!evento) {
       const estadoActual = await Eventos.getEstado(req.usuario.id_empresa, id);
       if (!estadoActual) return res.status(404).json({ mensaje: "Evento no encontrado" });
-      return res.status(409).json({ mensaje: "El evento ya estaba cancelado" });
+      const mensajes = {
+        cancelado: "El evento ya estaba cancelado",
+        realizado: "Un evento realizado no se puede cancelar",
+        no_aceptada: "La propuesta no fue aceptada: el evento no está en curso",
+      };
+      return res.status(409).json({ mensaje: mensajes[estadoActual] ?? "El evento no se puede cancelar" });
     }
     res.json(evento);
   } catch (error) {

@@ -104,7 +104,11 @@ Así, cuando agreguemos **MongoDB**, solo hay que crear `src/models/mongo/empres
 funciones (`getAll`, `getById`, `create`, `update`, `remove`), registrarlo en `src/models/index.js`
 y poner `DB_CLIENT=mongo` en el `.env`. Rutas y controllers no cambian.
 
-## Link de diagrama: https://dbdiagram.io/d/6ad23077fe5cc8bda2d9dbd2
+## Modelo lógico
+
+- Imagen: `database/modelo-logico.png` (generada desde `schema.sql`, así coincide siempre con el script).
+- Fuente: `database/modelo-logico.dbml`. Para verlo o editarlo en dbdiagram.io, pegar ese archivo en el editor.
+- Diagrama original del grupo: https://dbdiagram.io/d/6ad23077fe5cc8bda2d9dbd2
 
 ## Docker
 
