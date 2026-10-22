@@ -3,6 +3,13 @@
 API del sistema de eventos (multitenant) hecha con **Node.js + Express + PostgreSQL**.
 Por ahora tiene el CRUD de `empresas`.
 
+**Dominio:** una **empresa que organiza eventos para centros de estudiantes** (por ejemplo, la fiesta
+de bienvenida): solicitud, propuesta, confirmación, proveedores, tareas y cierre. La base es
+**multitenant**: cada empresa organizadora es una fila de `empresas`, y los centros de estudiantes
+son sus **clientes** (tabla `clientes`).
+Explicación completa del dominio: [00-dominio.md](https://github.com/maxibertaina03/intermaterias-infra/blob/develop/docs/si/00-dominio.md).
+Tablas de la base: [database/entidades.md](database/entidades.md).
+
 ## Requisitos
 
 - Node.js 20 o superior
@@ -34,6 +41,11 @@ psql -U postgres -d eventos -f database/empresas.sql
 # o con Docker (crea la base y la tabla automáticamente)
 docker compose up -d
 ```
+
+### CORS
+
+La API solo acepta peticiones del navegador que vengan de la URL del front, configurada en
+`FRONTEND_URL` (por defecto `http://localhost:5173`). Si el front corre en otro puerto, cambialo en el `.env`.
 
 ## Ejecutar
 
@@ -92,6 +104,38 @@ Así, cuando agreguemos **MongoDB**, solo hay que crear `src/models/mongo/empres
 funciones (`getAll`, `getById`, `create`, `update`, `remove`), registrarlo en `src/models/index.js`
 y poner `DB_CLIENT=mongo` en el `.env`. Rutas y controllers no cambian.
 
+## Modelo lógico
+
+- Imagen: `database/modelo-logico.png` (generada desde `schema.sql`, así coincide siempre con el script).
+- Fuente: `database/modelo-logico.dbml`. Para verlo o editarlo en dbdiagram.io, pegar ese archivo en el editor.
+- Diagrama original del grupo: https://dbdiagram.io/d/6ad23077fe5cc8bda2d9dbd2
+
+## Docker
+
+Construir la imagen:
+
+```bash
+docker build -t intermaterias-api .
+```
+
+Correr el contenedor (necesita un archivo `.env` local con las variables de entorno):
+
+```bash
+docker run --rm -p 3000:3000 --env-file .env intermaterias-api
+```
+
+Probar:
+
+```bash
+curl -i localhost:3000/api/instancia
+```
+
+Devuelve `{ "instancia": "<id-del-contenedor>" }` y el header `X-Instancia`.
+
+## Estructura para programar
+
+Antes de agregar endpoints leé **[ESTRUCTURA.md](ESTRUCTURA.md)**: capas, multitenant con `req.usuario`, convenciones y **los endpoints de cada área**.
+
 ## Trabajo en grupo
 
 Ver [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de ramas (`masita` / `facu` / `tomi` / `lucas` → `develop` → `main`).
@@ -101,3 +145,9 @@ Ver [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de ramas (`masita` / `facu`
 ```bash
 gh api -X PUT repos/maxibertaina03/intermaterias-backend/collaborators/USUARIO_GITHUB -f permission=push
 ```
+## Documentar en infra
+
+Conseguir la MONGO_URI (pedirla por privado).
+Setear DB_CLIENT=mongo y MONGO_URI=... como variables de entorno en cada réplica.
+Asegurarse de que la IP de cada réplica esté permitida en Atlas → Network Access.
+Levantar las réplicas como siempre.
