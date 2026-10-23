@@ -26,6 +26,9 @@ import invitadosPublicoRouter from "./routes/invitadosPublico.routes.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Un solo salto hasta nginx: así req.ip (y el rate limit de /api/publico) usan el X-Forwarded-For real
+app.set("trust proxy", 1);
+
 app.use(cors({ origin: process.env.FRONTEND_URL }));
 app.use(express.json());
 

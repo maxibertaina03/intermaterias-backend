@@ -17,6 +17,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 ### Cambiado
 - **Ya no se crean cuentas solas**: quien entra con una cuenta de Clerk sin alta recibe "No tenés acceso". Los usuarios de una empresa desactivada tampoco entran.
 - `/api/empresas` requiere iniciar sesión como super admin (antes era pública).
+- `/api/publico` ahora limita los pedidos por IP (`express-rate-limit`), para que no se puedan cargar respuestas falsas de a montones.
+- El comprobante de un invitado se descarta si no asiste o paga en efectivo (antes quedaba guardado aunque no hiciera falta).
+
+### Corregido
+- El token de la invitación de ejemplo en `schema.sql` ya no es un valor fijo: se genera al cargar los datos, para que nunca sea el de una invitación real.
 
 ## [1.0.1] - 2026-10-22
 
