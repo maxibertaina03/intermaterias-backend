@@ -1,6 +1,6 @@
 # Entidades y atributos del sistema de eventos
 
-> **Versión 4 · 16/10/2026** — login con Clerk por usuario y contraseña. (v2: ajustada con lo **confirmado en el relevamiento**.)
+> **Versión 6 · 22/10/2026** — acceso por empresa, roles de administración e invitados con respuesta y comprobante.
 > Todos tenemos que poder explicar por qué existe cada tabla.
 > Términos, estados y reglas: [lenguaje ubicuo](https://github.com/maxibertaina03/intermaterias-infra/blob/develop/docs/si/03-dominio.md).
 
@@ -31,20 +31,21 @@ organizadora tiene `id_empresa` → `empresas`.
 |--------|---------|--------|
 | La organizadora es una **empresa**; el **centro de estudiantes es el cliente** | Lo aclaró el cliente | R [M] |
 | Nueva tabla **`contactos`**, separada de `clientes` | El contacto (delegado, miembro de la comisión) puede cambiar sin que cambie el cliente | R [M] |
-| `usuarios.rol` pasa a la tabla **`usuario_roles`** | Hay 4 roles y **una persona puede tener varios** | R [M] |
+| `usuarios.rol` pasa a la tabla **`usuario_roles`** | Una persona puede tener varios roles | R [M] |
 | Nuevos **estados de `eventos`** (`recibida`, `falta_informacion`, `propuesta_enviada`, `no_aceptada`…) | Distinguir "pendiente de atención" de "propuesta enviada" es clave para no perder pedidos | R [M, T] |
 | `propuestas`: estados `presentada` y **`vencida`**, `fecha_presentacion`, `vigencia_dias` (15) y `descuento` | Las propuestas vencen a los 15 días; hay descuentos puntuales | R [T] |
 | `evento_servicios`: **`es_propio`** y **`id_responsable`** | Algunos servicios los hace el equipo propio, con un responsable | R [F] |
 | **v3:** `usuarios.clerk_user_id` en lugar de `password_hash` | El login lo hace **Clerk** (aprobado por el profe): las contraseñas no se guardan en nuestra base | Etapa 3 |
-| **v4:** `usuarios.email` pasa a ser opcional | Se entra con **usuario y contraseña** de Clerk; el usuario se crea solo la primera vez | Etapa 3 |
+| **v4:** `usuarios.email` pasa a ser opcional | Se entra con **usuario y contraseña** de Clerk | Etapa 3 |
+| **v5:** cada usuario pertenece a una empresa; `usuarios.usuario`, `usuarios.es_superadmin` y el rol `admin_empresa` | El super admin crea empresas y su primer administrador; cada administrador gestiona el acceso de su equipo | Migración 005 |
+| **v6:** `invitaciones` e `invitados` | Cada evento confirmado puede tener un link público para responder y registrar el pago/comprobante | Migración 006 |
 
 ## Lo que NO guardamos (fuera del alcance)
 
 | Tema | Por qué no |
 |------|------------|
-| Lista de asistentes (quién va y quién no) | "No se administra a cada invitado": guardamos solo la cantidad estimada |
 | Tarjetas / entradas y su precio | Venta de entradas: fuera del alcance |
-| Cobros, señas, pagos a proveedores | Cobros y pagos: fuera del alcance. Además el cliente confirmó que **no piden seña** [T] |
+| Cobros con tarjeta, señas y pagos a proveedores | Se registra la respuesta al pago por invitado, pero no se procesa un cobro ni se administra una seña [T] |
 | Historial de versiones de la propuesta | Solo importa la vigente [T] (los cambios relevantes sí se registran) |
 
 ---
@@ -66,27 +67,33 @@ organizadora tiene `id_empresa` → `empresas`.
 | activo | BOOLEAN | DEFAULT TRUE |
 | fecha_creacion | TIMESTAMP | DEFAULT NOW() |
 
-### 2. `usuarios` — personal de la organizadora · A
+### 2. `usuarios` — personal de la organizadora y super admin · A
 
-Solo el personal de la empresa usa el sistema [R M]. Los roles van en `usuario_roles`.
+El personal pertenece a una empresa. El super admin administra las empresas y puede no pertenecer a ninguna. Los roles van en `usuario_roles`.
 
 | Atributo | Tipo | Restricciones | Por qué |
 |----------|------|---------------|---------|
 | id_usuario | SERIAL | PK | |
-| id_empresa | INT | NOT NULL, FK → empresas | |
+| id_empresa | INT | FK → empresas; NULL para el super admin | Define el tenant del usuario |
 | nombre | VARCHAR(100) | NOT NULL | |
 | email | VARCHAR(150) | UNIQUE (id_empresa, email) | Opcional: se copia de Clerk si la cuenta tiene email |
-| clerk_user_id | VARCHAR(64) | UNIQUE | Cuenta de Clerk. **Alta automática:** la primera vez que alguien entra, se crea su usuario en la empresa por defecto con sus roles |
-| activo | BOOLEAN | DEFAULT TRUE | Dar de baja sin borrar su historial |
+| usuario | VARCHAR(64) | UNIQUE | Identificador de login en Clerk (4 a 64 letras, números, guiones o guiones bajos) |
+| clerk_user_id | VARCHAR(64) | UNIQUE | Identificador de cuenta de Clerk; la contraseña se gestiona allí |
+| es_superadmin | BOOLEAN | NOT NULL, DEFAULT FALSE | Distingue a quien administra empresas |
+| activo | BOOLEAN | DEFAULT TRUE | Desactivar sin borrar su historial |
+
+La API solo da acceso a quien fue creado por un administrador. Las contraseñas de Clerk requieren **15 caracteres o más**.
 
 ### 3. `usuario_roles` — roles de cada usuario · R [M] (tabla N:M con valor fijo)
 
-"Una misma persona puede asumir más de una de estas responsabilidades" [M].
+"Una misma persona puede asumir más de una de estas responsabilidades" [M]. Además, `admin_empresa` habilita la administración de usuarios de la empresa.
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
 | id_usuario | INT | PK compuesta, FK → usuarios |
-| rol | VARCHAR(30) | PK compuesta, CHECK (rol IN ('atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')) |
+| rol | VARCHAR(30) | PK compuesta, CHECK (rol IN ('admin_empresa', 'atencion_cliente', 'responsable_propuesta', 'responsable_organizacion', 'integrante')) |
+
+`admin_empresa` administra los usuarios de su empresa y no puede quitarse el rol ni desactivarse a sí mismo.
 
 ### 4. `clientes` — quien encarga el evento · R [M]
 
@@ -305,6 +312,43 @@ revisión la hace el personal, no el sistema [M, T].
 | valor_anterior | TEXT | |
 | valor_nuevo | TEXT | |
 
+### 19. `invitaciones` — enlace público para confirmar asistencia · v6
+
+Cada evento tiene como máximo una invitación. La empresa comparte su token con el centro para que sus invitados respondan sin iniciar sesión.
+
+| Atributo | Tipo | Restricciones |
+|----------|------|---------------|
+| id_invitacion | SERIAL | PK |
+| id_empresa | INT | NOT NULL, FK → empresas |
+| id_evento | INT | NOT NULL, UNIQUE, FK → eventos |
+| token | VARCHAR(64) | NOT NULL, UNIQUE |
+| precio_por_invitado | NUMERIC(12,2) | NOT NULL, CHECK (precio_por_invitado >= 0) |
+| activa | BOOLEAN | NOT NULL, DEFAULT TRUE |
+| fecha_limite | DATE | Opcional; vencido después de esta fecha |
+| fecha_creacion | TIMESTAMP | DEFAULT NOW() |
+
+La API solo permite crearla o actualizarla para eventos `confirmado` o `en_preparacion`. El token identifica el enlace público; una invitación inactiva o vencida ya no acepta respuestas.
+
+### 20. `invitados` — respuesta de una persona al evento · v6
+
+No requiere cuenta. Cada respuesta indica si asiste y, si asiste, cómo paga. Puede adjuntar un comprobante que el equipo verifica después.
+
+| Atributo | Tipo | Restricciones |
+|----------|------|---------------|
+| id_invitado | SERIAL | PK |
+| id_invitacion | INT | NOT NULL, FK → invitaciones |
+| nombre | VARCHAR(100) | NOT NULL |
+| apellido | VARCHAR(100) | NOT NULL |
+| asiste | BOOLEAN | NOT NULL |
+| medio_pago | VARCHAR(20) | CHECK (medio_pago IN ('efectivo', 'transferencia')); NULL si no asiste |
+| comprobante | BYTEA | Opcional; archivo PDF, JPG o PNG (máximo 5 MB). Solo se guarda si asiste y paga por transferencia |
+| comprobante_nombre | VARCHAR(200) | Nombre original del archivo |
+| comprobante_tipo | VARCHAR(100) | MIME type del archivo |
+| pago_verificado | BOOLEAN | NOT NULL, DEFAULT FALSE |
+| fecha_respuesta | TIMESTAMP | DEFAULT NOW() |
+
+Regla: si `asiste` es falso, `medio_pago` debe ser NULL. El comprobante es opcional y solo se guarda con transferencia; atención al cliente u organización marcan el pago como verificado.
+
 ---
 
 ## Relaciones
@@ -312,6 +356,7 @@ revisión la hace el personal, no el sistema [M, T].
 | Relación | Cardinalidad | Cómo se resuelve |
 |----------|--------------|------------------|
 | empresa — usuarios, clientes, cursos, tipos_evento, sedes, eventos, servicios, proveedores | 1 : N | `id_empresa` en cada tabla |
+| usuario — empresa | N : 1 (opcional para super admin) | `usuarios.id_empresa` |
 | usuario — roles | 1 : N (valores fijos) | tabla `usuario_roles` |
 | cliente — contactos | 1 : N | `contactos.id_cliente` |
 | cliente — eventos | 1 : N | `eventos.id_cliente` |
@@ -331,6 +376,9 @@ revisión la hace el personal, no el sistema [M, T].
 | usuario — tareas (responsable) | 1 : N | `tareas.id_responsable` |
 | evento — cambios | 1 : N | `cambios_evento.id_evento` |
 | usuario — cambios (quién registró) | 1 : N | `cambios_evento.id_usuario` |
+| empresa — invitaciones | 1 : N | `invitaciones.id_empresa` |
+| evento — invitación | 1 : 1 (opcional) | `invitaciones.id_evento` UNIQUE |
+| invitación — invitados | 1 : N | `invitados.id_invitacion` |
 
 ## Cómo cubre el recorrido obligatorio
 
@@ -344,12 +392,14 @@ revisión la hace el personal, no el sistema [M, T].
 | Consultar pendientes | evento_servicios `pendiente`; tareas no hechas o vencidas; propuestas por vencer |
 | Cambio relevante | cambios_evento |
 | Cerrar o cancelar | eventos `realizado` (+ observaciones) / `cancelado` (+ motivo) |
+| Confirmar invitados y revisar pagos | invitaciones, invitados (respuestas públicas sin login) |
 
 ## Reglas que valida la API (no la base)
 
 - **No se cargan servicios acordados ni tareas** si el evento no está `confirmado` o posterior [M].
 - Al aceptar la propuesta, el evento pasa a `confirmado` y se crean los `evento_servicios` desde los ítems [T].
 - Una propuesta `presentada` pasa a `vencida` si pasaron `vigencia_dias` sin respuesta [T].
+- El formulario público acepta respuestas mientras la invitación esté activa y dentro de su fecha límite; el comprobante es opcional.
 
 ## Pendiente de confirmar (hipótesis)
 

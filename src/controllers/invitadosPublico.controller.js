@@ -45,10 +45,12 @@ export const responder = async (req, res) => {
   try {
     const { invitacion, error } = await buscarInvitacionVigente(req.params.token);
     if (error) return res.status(error[0]).json({ mensaje: error[1] });
+    // El comprobante solo tiene sentido si asiste y paga por transferencia; si no, se descarta
+    const archivo = medio_pago === "transferencia" ? req.file : undefined;
     const invitado = await Invitados.crearInvitado(
       invitacion.id_invitacion,
       { nombre, apellido, asiste, medio_pago },
-      req.file
+      archivo
     );
     res.status(201).json(invitado);
   } catch (error) {
