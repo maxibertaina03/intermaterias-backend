@@ -7,6 +7,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.0.1] - 2026-10-22
+
+Versión PARCHE: refuerzos del link público de invitados y documentación de la base al día con la v2.
+
 ### Cambiado
 - Documentación de entidades y guía de uso actualizadas a v6: administración de usuarios por empresa e invitados públicos.
 - DER conceptual actualizado con los campos de v2 y las entidades de invitaciones e invitados.
@@ -69,7 +73,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.1...develop
+[2.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.1...v2.0.0
 [1.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v0.1.0...v1.0.0
