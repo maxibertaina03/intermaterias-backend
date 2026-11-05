@@ -1,7 +1,8 @@
 -- =====================================================================
 -- Sistema de eventos (intermaterias) - Script de la base de datos
--- Versión 6: invitados a los eventos (link público + comprobante).
--- (v5: cada empresa con sus usuarios (super admin, rol admin_empresa, usuarios.usuario).
+-- Versión 7: prueba gratuita de 30 días con autoregistro (empresas.fecha_fin_prueba; cuit opcional).
+-- (v6: invitados a los eventos (link público + comprobante).
+--  v5: cada empresa con sus usuarios (super admin, rol admin_empresa, usuarios.usuario).
 --  v4: login con Clerk por usuario y contraseña; usuarios.clerk_user_id; email opcional.)
 -- Crea toda la estructura desde cero y carga datos de prueba.
 -- Se puede ejecutar varias veces: primero borra todo.
@@ -47,12 +48,13 @@ DROP TABLE IF EXISTS empresas;
 CREATE TABLE empresas (
     id_empresa SERIAL PRIMARY KEY,
     nombre VARCHAR(150) NOT NULL,
-    cuit VARCHAR(13) NOT NULL UNIQUE,
+    cuit VARCHAR(13) UNIQUE,              -- opcional: quien se registra a probar no lo carga
     email VARCHAR(150),
     telefono VARCHAR(30),
     direccion VARCHAR(200),
     activo BOOLEAN DEFAULT TRUE,
-    fecha_creacion TIMESTAMP DEFAULT NOW()
+    fecha_creacion TIMESTAMP DEFAULT NOW(),
+    fecha_fin_prueba DATE                 -- prueba gratuita: NULL = sin límite; vencida = solo lectura
 );
 
 -- Personal de la organizadora (los únicos que usan el sistema) y el super admin.

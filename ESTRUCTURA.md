@@ -178,6 +178,15 @@ Para `PUT /proveedores/:id/servicios`, el body es `{ "id_servicios": [1, 2] }`; 
 
 `GET /servicios-acordados?evento=ID` filtra por evento (sin el filtro devuelve los de la organizadora). `PUT /servicios-acordados/:id` acepta `es_propio`, `id_proveedor`, `id_responsable` y `observaciones`; los campos pueden actualizarse parcialmente. Un servicio propio no lleva proveedor. Cambiar el tipo de cumplimiento o el proveedor devuelve el estado a `pendiente`. La confirmación requiere que el evento esté confirmado o en preparación y, si el servicio es externo, que tenga asignado un proveedor activo que ofrezca ese servicio. Las rutas que modifican catálogos requieren `atencion_cliente`, `responsable_propuesta` o `responsable_organizacion`; las que modifican coordinación requieren `responsable_organizacion` o `integrante`.
 
+### masita · Prueba gratuita (v2.2.0)
+| Método y ruta | Quién | Qué hace |
+|---|---|---|
+| `POST /publico/registro` | público (sin login) | Autoregistro: `{ empresa, nombre, apellido?, email?, usuario, password }` → 201. Crea la cuenta en Clerk, la empresa con `fecha_fin_prueba` = hoy + 30 días, su administrador con los 5 roles y catálogos de ejemplo (3 tipos de evento, 5 servicios, 1 sede). Máximo 5 registros por hora por IP |
+
+`req.usuario` (y `GET /me`) suma `fecha_fin_prueba`, `dias_prueba` y `prueba_vencida`. Con la prueba vencida, `soloLecturaSiPruebaVencida`
+responde **403** `{ codigo: "prueba_vencida", mensaje }` a todo lo que no sea `GET`: la empresa ve sus datos pero no modifica.
+El super admin puede cambiar `fecha_fin_prueba` con `PUT /empresas/:id` (`null` = sin límite).
+
 ### masita · Login y usuarios
 | Método y ruta | Quién | Qué hace |
 |---|---|---|
