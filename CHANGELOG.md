@@ -7,6 +7,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.1.0] - 2026-11-05
+
+Sin cambios en la API: acompaña los colores del front.
+
 ## [2.0.1] - 2026-10-22
 
 Versión PARCHE: refuerzos del link público de invitados y documentación de la base al día con la v2.
@@ -73,7 +77,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.1...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.1.0...develop
+[2.1.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.1...v2.0.0
 [1.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.0...v1.0.1
