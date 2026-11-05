@@ -7,6 +7,16 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.2.0] - 2026-11-05
+
+Prueba gratuita de 30 días: autoregistro de empresas, catálogos de ejemplo y modo consulta al vencer.
+
+### Agregado
+- **Prueba gratuita de 30 días con autoregistro** (`POST /api/publico/registro`): una organizadora crea su empresa y su usuario administrador, con catálogos de ejemplo para empezar enseguida. Máximo 5 registros por hora por conexión.
+- Al vencer la prueba, la empresa queda en **solo lectura**: ve sus datos, pero no puede cargar ni modificar (403 `prueba_vencida`).
+- `GET /api/me` informa los días de prueba que quedan; el super admin puede extender o quitar la prueba de una empresa.
+- Base de datos v7 (migración `007-prueba-gratuita.sql`): `empresas.fecha_fin_prueba` y CUIT opcional.
+
 ## [2.1.0] - 2026-11-05
 
 Sin cambios en la API: acompaña los colores del front.
@@ -77,7 +87,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.1.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.0...develop
+[2.2.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v1.0.1...v2.0.0
