@@ -6,7 +6,8 @@ import empresasRouter from "./routes/empresas.routes.js";
 import instanciaRouter from "./routes/instancia.routes.js";
 import { clerkMiddleware } from "@clerk/express";
 import { usaClerk, usuarioActual } from "./middlewares/usuarioActual.js";
-import { requireEmpresa, requireSuperAdmin } from "./middlewares/requireEmpresa.js";
+import { requireEmpresa, requireSuperAdmin, soloLecturaSiPruebaVencida } from "./middlewares/requireEmpresa.js";
+import registroRouter from "./routes/registro.routes.js";
 import usuariosRouter from "./routes/usuarios.routes.js";
 import meRouter from "./routes/me.routes.js";
 import clientesRouter from "./routes/clientes.routes.js";
@@ -41,6 +42,7 @@ app.use((req, res, next) => {
 app.use("/api/instancia", instanciaRouter);
 // Rutas públicas (sin login) van acá, antes de usuarioActual. Ej.: /api/publico (invitados, Lucas)
 app.use("/api/publico/invitaciones", invitadosPublicoRouter);
+app.use("/api/publico/registro", registroRouter);                 // prueba gratuita de 30 días
 
 // ── Rutas que necesitan saber quién es el usuario (y de qué empresa) ──
 // Todas ya están montadas: cada uno completa su archivo de routes/ sin tocar este.
@@ -51,6 +53,7 @@ app.use("/api/empresas", requireSuperAdmin, empresasRouter);    // solo el super
 
 // ── Datos de una empresa: el super admin no entra (no tiene empresa) ──
 app.use("/api", requireEmpresa);
+app.use("/api", soloLecturaSiPruebaVencida);                   // prueba vencida: solo lectura
 app.use("/api/usuarios", usuariosRouter);                       // masita (alta del equipo)
 app.use("/api/clientes", clientesRouter);                       // Lucas
 app.use("/api/eventos", eventosRouter);                         // Lucas

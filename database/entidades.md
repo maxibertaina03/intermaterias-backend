@@ -54,18 +54,19 @@ organizadora tiene `id_empresa` → `empresas`.
 
 ### 1. `empresas` — la empresa organizadora (tenant) · A
 
-**Sin cambios** desde la primera actividad.
+Igual que en la primera actividad, salvo la **v7**: CUIT opcional y `fecha_fin_prueba` para la prueba gratuita.
 
 | Atributo | Tipo | Restricciones |
 |----------|------|---------------|
 | id_empresa | SERIAL | PK |
 | nombre | VARCHAR(150) | NOT NULL |
-| cuit | VARCHAR(13) | NOT NULL, UNIQUE |
+| cuit | VARCHAR(13) | UNIQUE; opcional desde la v7 (quien se registra a probar no lo carga) |
 | email | VARCHAR(150) | |
 | telefono | VARCHAR(30) | |
 | direccion | VARCHAR(200) | |
 | activo | BOOLEAN | DEFAULT TRUE |
 | fecha_creacion | TIMESTAMP | DEFAULT NOW() |
+| fecha_fin_prueba | DATE | v7 · Prueba gratuita: hasta qué día dura. NULL = sin límite. Vencida = solo lectura |
 
 ### 2. `usuarios` — personal de la organizadora y super admin · A
 

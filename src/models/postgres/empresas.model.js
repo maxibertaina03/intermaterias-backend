@@ -37,8 +37,9 @@ export const create = async ({ nombre, cuit, email, telefono, direccion }) => {
   }
 };
 
-// Los campos que no vienen en el body conservan su valor actual (COALESCE)
-export const update = async (id, { nombre, cuit, email, telefono, direccion, activo }) => {
+// Los campos que no vienen en el body conservan su valor actual (COALESCE).
+// fecha_fin_prueba: si viene, se guarda tal cual (null = quitar el límite de la prueba gratuita).
+export const update = async (id, { nombre, cuit, email, telefono, direccion, activo, fecha_fin_prueba }) => {
   try {
     const resultado = await pool.query(
       `UPDATE empresas SET
@@ -47,10 +48,11 @@ export const update = async (id, { nombre, cuit, email, telefono, direccion, act
          email = COALESCE($3, email),
          telefono = COALESCE($4, telefono),
          direccion = COALESCE($5, direccion),
-         activo = COALESCE($6, activo)
+         activo = COALESCE($6, activo),
+         fecha_fin_prueba = CASE WHEN $8::boolean THEN $9::date ELSE fecha_fin_prueba END
        WHERE id_empresa = $7
        RETURNING *`,
-      [nombre, cuit, email, telefono, direccion, activo, id]
+      [nombre, cuit, email, telefono, direccion, activo, id, fecha_fin_prueba !== undefined, fecha_fin_prueba ?? null]
     );
     return resultado.rows[0] ?? null;
   } catch (error) {

@@ -39,6 +39,10 @@ export const crearEmpresa = async (req, res) => {
 export const editarEmpresa = async (req, res) => {
   const { id } = req.params;
   if (!idValido(id)) return res.status(404).json({ mensaje: "Empresa no encontrada" });
+  const fin = req.body?.fecha_fin_prueba;
+  if (fin !== undefined && fin !== null && !/^\d{4}-\d{2}-\d{2}$/.test(fin)) {
+    return res.status(400).json({ mensaje: "La fecha de fin de la prueba no es válida" });
+  }
 
   try {
     const empresa = await Empresas.update(id, req.body ?? {});
