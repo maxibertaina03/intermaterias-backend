@@ -7,6 +7,12 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+### Agregado
+- Workflow `publicar-imagen.yml`: con cada tag `vX.Y.Z` GitHub Actions arma la imagen y la publica en `ghcr.io/maxibertaina03/intermaterias-backend` (el servidor solo la descarga).
+
+### Cambiado
+- Imagen de producción: corre con el usuario `node` (sin privilegios), `tini`, `NODE_ENV=production` y hora de Argentina.
+
 ## [2.2.0] - 2026-11-05
 
 Prueba gratuita de 30 días: autoregistro de empresas, catálogos de ejemplo y modo consulta al vencer.
