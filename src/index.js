@@ -15,6 +15,7 @@ import eventosRouter from "./routes/eventos.routes.js";
 import propuestasRouter from "./routes/propuestas.routes.js";
 import tareasRouter from "./routes/tareas.routes.js";
 import pendientesRouter from "./routes/pendientes.routes.js";
+import primerosPasosRouter from "./routes/primerosPasos.routes.js";
 import serviciosAcordadosRouter from "./routes/serviciosAcordados.routes.js";
 import serviciosRouter from "./routes/servicios.routes.js";
 import proveedoresRouter from "./routes/proveedores.routes.js";
@@ -62,6 +63,7 @@ app.use("/api/invitados", invitadosRouter);                     // Lucas
 app.use("/api/propuestas", propuestasRouter);                   // Tomi
 app.use("/api/tareas", tareasRouter);                           // Tomi
 app.use("/api/pendientes", pendientesRouter);                   // Tomi
+app.use("/api/primeros-pasos", primerosPasosRouter);            // masita (recorrido guiado)
 app.use("/api/servicios-acordados", serviciosAcordadosRouter);  // Facu
 app.use("/api/servicios", serviciosRouter);                     // Facu
 app.use("/api/proveedores", proveedoresRouter);                 // Facu

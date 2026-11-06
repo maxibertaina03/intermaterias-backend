@@ -39,6 +39,7 @@ organizadora tiene `id_empresa` → `empresas`.
 | **v4:** `usuarios.email` pasa a ser opcional | Se entra con **usuario y contraseña** de Clerk | Etapa 3 |
 | **v5:** cada usuario pertenece a una empresa; `usuarios.usuario`, `usuarios.es_superadmin` y el rol `admin_empresa` | El super admin crea empresas y su primer administrador; cada administrador gestiona el acceso de su equipo | Migración 005 |
 | **v6:** `invitaciones` e `invitados` | Cada evento confirmado puede tener un link público para responder y registrar el pago/comprobante | Migración 006 |
+| **v8:** `usuarios.recorrido_visto` y `usuarios.primeros_pasos_cerrado` | Recorrido guiado para quien entra por primera vez: se muestra una sola vez por usuario, aunque cambie de computadora | Migración 008 |
 
 ## Lo que NO guardamos (fuera del alcance)
 
@@ -82,6 +83,8 @@ El personal pertenece a una empresa. El super admin administra las empresas y pu
 | clerk_user_id | VARCHAR(64) | UNIQUE | Identificador de cuenta de Clerk; la contraseña se gestiona allí |
 | es_superadmin | BOOLEAN | NOT NULL, DEFAULT FALSE | Distingue a quien administra empresas |
 | activo | BOOLEAN | DEFAULT TRUE | Desactivar sin borrar su historial |
+| recorrido_visto | BOOLEAN | NOT NULL, DEFAULT FALSE | Ya vio (o salteó) el recorrido de bienvenida: no se le vuelve a abrir solo |
+| primeros_pasos_cerrado | BOOLEAN | NOT NULL, DEFAULT FALSE | Cerró la tarjeta "Primeros pasos" de Pendientes |
 
 La API solo da acceso a quien fue creado por un administrador. Las contraseñas de Clerk requieren **15 caracteres o más**.
 

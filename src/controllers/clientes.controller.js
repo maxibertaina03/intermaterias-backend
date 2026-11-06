@@ -52,12 +52,17 @@ export const obtener = async (req, res) => {
   }
 };
 
+// "contacto" es opcional: { nombre, telefono, email, rol } → queda como contacto vigente
 export const crear = async (req, res) => {
-  const error = validarCliente(req.body);
+  const error = validarCliente(req.body) ?? (req.body.contacto ? validarContacto(req.body.contacto) : null);
   if (error) return res.status(400).json({ mensaje: error });
+  const ct = req.body.contacto;
   try {
     const cliente = await Clientes.create(req.usuario.id_empresa, {
       nombre: texto(req.body.nombre), tipo: req.body.tipo, institucion: vacioANull(req.body.institucion),
+      contacto: ct ? {
+        nombre: texto(ct.nombre), telefono: vacioANull(ct.telefono), email: vacioANull(ct.email), rol: vacioANull(ct.rol),
+      } : null,
     });
     res.status(201).json(cliente);
   } catch (e) {
