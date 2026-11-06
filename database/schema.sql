@@ -1,7 +1,8 @@
 -- =====================================================================
 -- Sistema de eventos (intermaterias) - Script de la base de datos
--- Versión 7: prueba gratuita de 30 días con autoregistro (empresas.fecha_fin_prueba; cuit opcional).
--- (v6: invitados a los eventos (link público + comprobante).
+-- Versión 8: recorrido guiado para usuarios nuevos (usuarios.recorrido_visto, usuarios.primeros_pasos_cerrado).
+-- (v7: prueba gratuita de 30 días con autoregistro (empresas.fecha_fin_prueba; cuit opcional).
+--  v6: invitados a los eventos (link público + comprobante).
 --  v5: cada empresa con sus usuarios (super admin, rol admin_empresa, usuarios.usuario).
 --  v4: login con Clerk por usuario y contraseña; usuarios.clerk_user_id; email opcional.)
 -- Crea toda la estructura desde cero y carga datos de prueba.
@@ -68,6 +69,8 @@ CREATE TABLE usuarios (
     clerk_user_id VARCHAR(64) UNIQUE,    -- cuenta de Clerk (la crea el administrador; las contraseñas las maneja Clerk)
     es_superadmin BOOLEAN NOT NULL DEFAULT FALSE,
     activo BOOLEAN DEFAULT TRUE,
+    recorrido_visto BOOLEAN NOT NULL DEFAULT FALSE,        -- ya vio el recorrido de bienvenida
+    primeros_pasos_cerrado BOOLEAN NOT NULL DEFAULT FALSE, -- cerró la tarjeta "Primeros pasos"
     UNIQUE (id_empresa, email),
     CONSTRAINT usuarios_empresa_o_superadmin CHECK (es_superadmin OR id_empresa IS NOT NULL),
     FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa)

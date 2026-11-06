@@ -15,6 +15,14 @@ const SERVICIOS = [
   ["Fotografía", "Fotógrafo durante el evento", 120000],
 ];
 const SEDE = ["Salón de ejemplo", "Editá o borrá esta sede", 200];
+// Proveedores de ejemplo, con los servicios que dan (por nombre). Llevan la marca PROVEEDOR_DE_EJEMPLO en
+// las observaciones: "Primeros pasos" no los cuenta como proveedores propios.
+export const PROVEEDOR_DE_EJEMPLO = "Proveedor de ejemplo: editalo con tus datos o cargá los tuyos.";
+const PROVEEDORES = [
+  ["Catering Sabores (ejemplo)", "Laura", ["Catering"]],
+  ["Sonido Total (ejemplo)", "Martín", ["Sonido e iluminación"]],
+  ["Foto y Deco (ejemplo)", "Carla", ["Decoración", "Fotografía"]],
+];
 
 export const crearEmpresaDePrueba = async ({ empresa, nombre, email, usuario, clerk_user_id, dias }) => {
   const client = await pool.connect();
@@ -39,10 +47,23 @@ export const crearEmpresaDePrueba = async ({ empresa, nombre, email, usuario, cl
       "INSERT INTO tipos_evento (id_empresa, nombre) SELECT $1, unnest($2::varchar[])",
       [nueva.id_empresa, TIPOS_EVENTO]
     );
+    const idServicio = {};
     for (const [nombreServicio, descripcion, precio] of SERVICIOS) {
-      await client.query(
-        "INSERT INTO servicios (id_empresa, nombre, descripcion, precio_referencia) VALUES ($1, $2, $3, $4)",
+      const { rows: [s] } = await client.query(
+        "INSERT INTO servicios (id_empresa, nombre, descripcion, precio_referencia) VALUES ($1, $2, $3, $4) RETURNING id_servicio",
         [nueva.id_empresa, nombreServicio, descripcion, precio]
+      );
+      idServicio[nombreServicio] = s.id_servicio;
+    }
+    for (const [nombreProveedor, contacto, servicios] of PROVEEDORES) {
+      const { rows: [p] } = await client.query(
+        `INSERT INTO proveedores (id_empresa, nombre, contacto_nombre, observaciones)
+         VALUES ($1, $2, $3, $4) RETURNING id_proveedor`,
+        [nueva.id_empresa, nombreProveedor, contacto, PROVEEDOR_DE_EJEMPLO]
+      );
+      await client.query(
+        "INSERT INTO proveedor_servicios (id_proveedor, id_servicio) SELECT $1, unnest($2::int[])",
+        [p.id_proveedor, servicios.map((n) => idServicio[n])]
       );
     }
     await client.query(
