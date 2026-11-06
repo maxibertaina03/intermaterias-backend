@@ -45,13 +45,32 @@ export const getById = async (id_empresa, id_cliente) => {
   return { ...rows[0], contactos, eventos: eventos.rows };
 };
 
-export const create = async (id_empresa, { nombre, tipo, institucion }) => {
-  const { rows } = await pool.query(
-    `INSERT INTO clientes (id_empresa, nombre, tipo, institucion)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [id_empresa, nombre, tipo, institucion ?? null]
-  );
-  return rows[0];
+// Con "contacto", lo crea en la misma transacción como contacto vigente (alta en un solo paso).
+export const create = async (id_empresa, { nombre, tipo, institucion, contacto }) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows: [cliente] } = await client.query(
+      `INSERT INTO clientes (id_empresa, nombre, tipo, institucion)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [id_empresa, nombre, tipo, institucion ?? null]
+    );
+    if (contacto) {
+      const { rows: [ct] } = await client.query(
+        `INSERT INTO contactos (id_cliente, nombre, telefono, email, rol, vigente)
+         VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING *`,
+        [cliente.id_cliente, contacto.nombre, contacto.telefono ?? null, contacto.email ?? null, contacto.rol ?? null]
+      );
+      cliente.contacto = ct;
+    }
+    await client.query("COMMIT");
+    return cliente;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 // Los campos que no vienen conservan su valor

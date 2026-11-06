@@ -7,6 +7,16 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.3.0] - 2026-11-06
+
+Recorrido guiado para empresas nuevas: primeros pasos, cliente con contacto y proveedores de ejemplo (base v8).
+
+### Agregado
+- **Recorrido guiado** (base v8, migración `008-recorrido.sql`): `usuarios.recorrido_visto` y `usuarios.primeros_pasos_cerrado`, que `GET /api/me` devuelve y `PATCH /api/me/recorrido` actualiza (también con la prueba vencida).
+- `GET /api/primeros-pasos`: cuánto cargó la empresa (proveedores propios, usuarios, clientes con contacto, eventos, propuestas presentadas, links de invitados).
+- `POST /api/clientes` acepta un `contacto` opcional, que queda como contacto vigente.
+- El registro de la prueba gratuita carga también 3 proveedores de ejemplo con sus servicios.
+
 ## [2.2.1] - 2026-11-06
 
 Imagen de producción publicada en GitHub Container Registry para desplegar en el VPS.
@@ -97,7 +107,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.1...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.3.0...develop
+[2.3.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.1...v2.1.0

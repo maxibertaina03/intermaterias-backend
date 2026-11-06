@@ -120,7 +120,7 @@ Todos bajo `/api`. Los nombres de campos son los de `database/entidades.md`.
 ### Lucas · Clientes y solicitudes/eventos
 | Método y ruta | Qué hace |
 |---|---|
-| `GET/POST /clientes` · `GET/PUT/DELETE /clientes/:id` | CRUD de clientes |
+| `GET/POST /clientes` · `GET/PUT/DELETE /clientes/:id` | CRUD de clientes. `POST` acepta `contacto` opcional (`{ nombre, rol?, telefono?, email? }`): se crea en la misma transacción como contacto vigente |
 | `GET/POST /clientes/:id/contactos` · `PUT /clientes/:id/contactos/:idContacto` | Contactos del cliente (marcar `vigente`) |
 | `GET /eventos?estado=&desde=&hasta=&cliente=` | Listado con filtros (por fecha y estado, lo pide el alcance) |
 | `POST /eventos` | Nueva solicitud (estado `recibida`) |
@@ -186,6 +186,15 @@ Para `PUT /proveedores/:id/servicios`, el body es `{ "id_servicios": [1, 2] }`; 
 `req.usuario` (y `GET /me`) suma `fecha_fin_prueba`, `dias_prueba` y `prueba_vencida`. Con la prueba vencida, `soloLecturaSiPruebaVencida`
 responde **403** `{ codigo: "prueba_vencida", mensaje }` a todo lo que no sea `GET`: la empresa ve sus datos pero no modifica.
 El super admin puede cambiar `fecha_fin_prueba` con `PUT /empresas/:id` (`null` = sin límite).
+
+### masita · Recorrido guiado (v2.3.0)
+| Método y ruta | Quién | Qué hace |
+|---|---|---|
+| `PATCH /me/recorrido` | todos | `{ recorrido_visto?, primeros_pasos_cerrado? }` (booleanos). Va antes de la regla de solo lectura: funciona con la prueba vencida |
+| `GET /primeros-pasos` | usuarios de empresa | Progreso para la tarjeta "Primeros pasos": `{ proveedores, usuarios, clientes_con_contacto, eventos, propuestas_presentadas, invitaciones }`. Los proveedores de ejemplo del registro no cuentan |
+
+`req.usuario` (y `GET /me`) suma `recorrido_visto` y `primeros_pasos_cerrado`. El registro de la prueba gratuita carga también 3 proveedores
+de ejemplo con sus servicios (marcados en `observaciones`).
 
 ### masita · Login y usuarios
 | Método y ruta | Quién | Qué hace |

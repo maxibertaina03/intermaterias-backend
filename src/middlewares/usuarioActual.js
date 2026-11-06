@@ -4,6 +4,7 @@ import pool from "../data/db.js";
 // Identifica a la persona que hace el pedido y deja sus datos en req.usuario:
 //   req.usuario = { id_usuario, id_empresa, empresa, nombre, email, usuario, es_superadmin,
 //                   fecha_fin_prueba, prueba_vencida, dias_prueba,   ← prueba gratuita (null = sin límite)
+//                   recorrido_visto, primeros_pasos_cerrado,          ← recorrido guiado
 //                   roles: ["admin_empresa", "atencion_cliente", ...] }
 // TODAS las consultas de datos de una empresa filtran con req.usuario.id_empresa (multitenant).
 // El super admin no tiene empresa (id_empresa null): solo administra empresas.
@@ -18,6 +19,7 @@ export const usaClerk = Boolean(process.env.CLERK_SECRET_KEY);
 // Un usuario de una empresa desactivada no entra; el super admin sí.
 const SELECT_USUARIO = `
   SELECT u.id_usuario, u.id_empresa, e.nombre AS empresa, u.nombre, u.email, u.usuario, u.es_superadmin,
+         u.recorrido_visto, u.primeros_pasos_cerrado,
          e.fecha_fin_prueba, (e.fecha_fin_prueba IS NOT NULL AND e.fecha_fin_prueba < CURRENT_DATE) AS prueba_vencida,
          (e.fecha_fin_prueba - CURRENT_DATE) AS dias_prueba,
          COALESCE(array_agg(r.rol) FILTER (WHERE r.rol IS NOT NULL), '{}') AS roles
