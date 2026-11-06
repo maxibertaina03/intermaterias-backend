@@ -7,6 +7,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.2.1] - 2026-11-06
+
+Imagen de producción publicada en GitHub Container Registry para desplegar en el VPS.
+
 ### Agregado
 - Workflow `publicar-imagen.yml`: con cada tag `vX.Y.Z` GitHub Actions arma la imagen y la publica en `ghcr.io/maxibertaina03/intermaterias-backend` (el servidor solo la descarga).
 
@@ -93,7 +97,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.1...develop
+[2.2.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.0.0...v2.0.1
