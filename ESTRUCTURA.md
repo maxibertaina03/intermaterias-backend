@@ -21,6 +21,16 @@ src/
 Las tablas nuevas van **solo en Postgres**: los models se importan directo de `models/postgres/`
 (el modelo de Mongo cubre únicamente `empresas`, para la demo de Sistemas Operativos).
 
+```
+database/
+├── schema.sql                    → base completa (última versión) con datos de prueba
+├── migraciones/NNN-*.sql         → cambios para bases que ya existen (deploy.sh corre las nuevas)
+└── warehouse/                    → data warehouse (esquema dw): modelo estrella, ETL y consultas OLAP
+```
+
+El **data warehouse** no lo usa la API: es la base analítica (Base de Datos). Se carga con
+`CALL dw.cargar();` y está explicado en [database/warehouse/README.md](database/warehouse/README.md).
+
 ## El usuario y el multitenant (lo más importante)
 
 Toda ruta bajo `/api` (salvo `instancia` y las públicas de `/api/publico`) pasa por `usuarioActual`, que deja:

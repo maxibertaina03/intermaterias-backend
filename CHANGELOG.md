@@ -7,6 +7,12 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+### Agregado
+- **Data warehouse** (`database/warehouse/`), en el esquema `dw` de la misma base: modelo estrella con 4 tablas de hechos (eventos, propuestas, servicios cotizados, invitados) y 8 dimensiones (tiempo con temporada escolar, empresa, cliente, tipo de evento, sede, servicio con historia de precios SCD tipo 2, proveedor y estado del evento).
+- ETL `CALL dw.cargar()` (procedimiento en PL/pgSQL, en una transacción y con registro de cada corrida en `dw.etl_ejecuciones`).
+- Vistas de análisis (`dw.v_*`) y consultas OLAP de ejemplo: roll-up, cube, drill-down, slice, dice, pivot, rankings y crecimiento mes a mes.
+- `datos-historicos.sql`: empresa de demostración con ~3 años de actividad para tener volumen (y `borrar-datos-historicos.sql`).
+
 ## [2.3.0] - 2026-11-06
 
 Recorrido guiado para empresas nuevas: primeros pasos, cliente con contacto y proveedores de ejemplo (base v8).
