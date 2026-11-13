@@ -7,6 +7,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.4.0] - 2026-11-13
+
+Data warehouse para análisis (Base de Datos): modelo estrella, ETL y consultas OLAP.
+
 ### Agregado
 - **Data warehouse** (`database/warehouse/`), en el esquema `dw` de la misma base: modelo estrella con 4 tablas de hechos (eventos, propuestas, servicios cotizados, invitados) y 8 dimensiones (tiempo con temporada escolar, empresa, cliente, tipo de evento, sede, servicio con historia de precios SCD tipo 2, proveedor y estado del evento).
 - ETL `CALL dw.cargar()` (procedimiento en PL/pgSQL, en una transacción y con registro de cada corrida en `dw.etl_ejecuciones`).
@@ -113,7 +117,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.3.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.4.0...develop
+[2.4.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.1.0...v2.2.0
