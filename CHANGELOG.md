@@ -7,6 +7,18 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+### Cambiado
+- **Data warehouse según la consigna de Base de Datos**: pasa a una **base aparte** (`eventos_dw`) en el mismo servidor, y la migración se hace con `INSERT … SELECT` desde la base operativa a través de `postgres_fdw` (esquema `operativa` con tablas foráneas).
+- Un solo proceso de negocio, **la venta de eventos**, con 4 preguntas; una tabla de hechos `fact_ventas` (grano: servicio cotizado en una propuesta) y 6 dimensiones (tiempo, empresa, cliente, tipo de evento, servicio y estado de la propuesta). El descuento de cada propuesta se reparte entre sus ítems (`importe_neto`).
+- La carga es el procedimiento `cargar_dw()`: vacía el DW y carga primero dimensiones y después hechos, en una transacción.
+
+### Agregado
+- `03-verificacion.sql`: compara 8 totales del DW contra la base operativa (y propuesta por propuesta).
+- `04-consultas.sql`: una consulta por cada pregunta de negocio (ROLLUP, porcentajes, `SUM() OVER`, `RANK()`).
+
+### Quitado
+- El esquema `dw` dentro de la base operativa (4 hechos, SCD tipo 2 y vistas `dw.v_*`): lo reemplaza `eventos_dw`.
+
 ## [2.4.0] - 2026-11-13
 
 Data warehouse para análisis (Base de Datos): modelo estrella, ETL y consultas OLAP.

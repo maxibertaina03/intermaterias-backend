@@ -2,14 +2,14 @@
 -- Data warehouse · datos históricos de demostración (OPCIONAL)
 -- =====================================================================
 -- Crea la empresa "Eventos Históricos (demo)" con ~3 años de actividad creíble (2024 → 2026)
--- en las tablas del SISTEMA (public.*), para que el warehouse tenga volumen y tendencias:
+-- en las tablas de la base OPERATIVA, para que el warehouse tenga volumen y tendencias:
 -- temporadas (egresados a fin de año, bienvenidas en marzo), inflación en los precios,
 -- propuestas rechazadas con su motivo, cancelaciones, tareas, cambios e invitados.
 --
 -- - Es una empresa aparte: no toca los datos de las otras. Nadie entra al sistema con ella.
 -- - Es reproducible (setseed): siempre genera los mismos datos.
 -- - Si la empresa ya existe, no hace nada. Para sacarla: borrar-datos-historicos.sql
--- Después de cargarla: CALL dw.cargar();
+-- Se corre en la base operativa (eventos). Después, en eventos_dw: CALL cargar_dw();
 
 DO $$
 DECLARE
