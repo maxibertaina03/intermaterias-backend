@@ -7,6 +7,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.5.0] - 2026-11-19
+
+Data warehouse según la consigna de Base de Datos: base aparte (eventos_dw), un proceso de negocio con 4 preguntas, carga en un procedimiento y verificación contra la operativa.
+
 ### Cambiado
 - **Data warehouse según la consigna de Base de Datos**: pasa a una **base aparte** (`eventos_dw`) en el mismo servidor, y la migración se hace con `INSERT … SELECT` desde la base operativa a través de `postgres_fdw` (esquema `operativa` con tablas foráneas).
 - Un solo proceso de negocio, **la venta de eventos**, con 4 preguntas; una tabla de hechos `fact_ventas` (grano: servicio cotizado en una propuesta) y 6 dimensiones (tiempo, empresa, cliente, tipo de evento, servicio y estado de la propuesta). El descuento de cada propuesta se reparte entre sus ítems (`importe_neto`).
@@ -129,7 +133,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.4.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.0...develop
+[2.5.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.0...v2.2.1
