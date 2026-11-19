@@ -1,191 +1,179 @@
-# Data warehouse
+# Data warehouse · Venta de eventos
 
-Base analítica del sistema de eventos: responde preguntas de negocio (cuánto se vende, en qué
-temporada, por qué se pierden propuestas, cómo se cobran los invitados) sin tocar la base que usa
-el sistema todos los días.
+Base de datos analítica del sistema de eventos, armada siguiendo los 6 pasos de la consigna.
 
-| Archivo | Qué hace |
+| Archivo | Paso | Se corre en |
+|---|---|---|
+| `00-crear-base.sql` | Crea la base `eventos_dw` | `eventos` (una vez) |
+| `01-esquema.sql` | 3. Tablas de dimensiones y de hechos (y la conexión con la operativa) | `eventos_dw` |
+| `02-carga.sql` | 4 y 6. Procedimiento `cargar_dw()`: carga dimensiones y después hechos | `eventos_dw` |
+| `03-verificacion.sql` | 5. Totales del DW contra la base operativa | `eventos_dw` |
+| `04-consultas.sql` | 5. Las 4 preguntas de negocio | `eventos_dw` |
+| `datos-historicos.sql` | Opcional: ~3 años de datos de prueba en la operativa | `eventos` |
+| `borrar-datos-historicos.sql` | Saca esos datos de prueba | `eventos` |
+
+## Dos bases en el mismo servidor
+
+```
+                 servidor PostgreSQL (contenedor postgres)
+  ┌───────────────────────────────┐        ┌──────────────────────────────────┐
+  │ eventos  (base operativa)     │        │ eventos_dw  (data warehouse)     │
+  │                               │        │                                  │
+  │ empresas, clientes, eventos,  │◄───────│ esquema operativa: las mismas    │
+  │ propuestas, propuesta_items…  │  fdw   │ tablas, vistas desde acá         │
+  │                               │        │          │ INSERT … SELECT       │
+  │ (la usa el sistema)           │        │          ▼                       │
+  │                               │        │ dim_* y fact_ventas              │
+  └───────────────────────────────┘        └──────────────────────────────────┘
+```
+
+- **`eventos`** es la base **operativa**: la que usa el sistema todos los días. Está normalizada y
+  guarda el estado actual.
+- **`eventos_dw`** es el **data warehouse**: solo para análisis, con un modelo estrella.
+- PostgreSQL no deja escribir una consulta que lea de otra base. Por eso se usa la extensión
+  **`postgres_fdw`** (*foreign data wrapper*, viene con PostgreSQL): en `eventos_dw` crea el esquema
+  `operativa` con las tablas de `eventos` como **tablas foráneas**. No son copias: cada vez que se
+  consultan, PostgreSQL las lee de la otra base. Así la migración es un `INSERT` común:
+
+  ```sql
+  INSERT INTO dim_cliente (id_cliente, nombre, tipo, institucion)
+  SELECT id_cliente, nombre, … FROM operativa.clientes;
+  ```
+
+## Paso 1 · Proceso de negocio y preguntas
+
+**Proceso elegido: la venta de eventos.** La organizadora recibe el pedido de un centro de
+estudiantes y le presenta una **propuesta** con los **servicios** cotizados (salón, catering,
+sonido…), cada uno con su cantidad y precio. El centro la acepta (venta) o la rechaza, con un motivo.
+
+El DW tiene que responder:
+
+1. **¿Cuánto se vende por mes y por tipo de evento?**
+2. **¿Qué porcentaje de las propuestas se acepta, según el tipo de evento?**
+3. **¿Por qué se pierden las propuestas y cuánta plata representa cada motivo?**
+4. **¿Qué servicios se venden más cada año?**
+
+## Paso 2 · Grano, dimensiones y medidas
+
+**Grano: una fila por cada servicio cotizado en una propuesta** (cada fila de `propuesta_items`).
+
+Se eligió el ítem y no la propuesta entera porque la pregunta 4 pregunta por servicios: con una
+fila por propuesta no se podría saber qué servicio se vendió. Con este grano igual se responden las
+otras: para contar propuestas se usa `COUNT(DISTINCT id_propuesta)`.
+
+**Dimensiones** (desde dónde se miran las ventas):
+
+| Dimensión | Responde | Atributos |
+|---|---|---|
+| `dim_tiempo` | ¿cuándo? (fecha del evento) | año, trimestre, mes, nombre del mes, año-mes, día de la semana, temporada escolar |
+| `dim_tipo_evento` | ¿qué evento? | egresados, bienvenida, aniversario… |
+| `dim_servicio` | ¿qué se vendió? | nombre, precio de referencia |
+| `dim_cliente` | ¿a quién? | centro, tipo de cliente, institución |
+| `dim_estado_propuesta` | ¿cómo terminó? | estado y resultado: *Abierta*, *Ganada* o *Perdida* |
+| `dim_empresa` | ¿qué organizadora? | nombre (el sistema es multiempresa) |
+
+**Medidas** (lo que se suma o promedia):
+
+| Medida | Qué es |
 |---|---|
-| `01-esquema.sql` | Crea el esquema `dw` con el modelo estrella (dimensiones y hechos). Lo borra y lo crea de cero |
-| `02-etl.sql` | Crea el procedimiento `dw.cargar()`: extrae de `public.*`, transforma y carga en `dw.*` |
-| `03-vistas.sql` | Vistas de análisis (`dw.v_*`), una por pregunta de negocio |
-| `04-consultas.sql` | Consultas OLAP de ejemplo: roll-up, drill-down, slice, dice, pivot, rankings |
-| `datos-historicos.sql` | Opcional: una empresa de demostración con ~3 años de actividad, para tener volumen |
-| `borrar-datos-historicos.sql` | Saca esa empresa de demostración |
+| `cantidad` | unidades del servicio (por ejemplo, personas del catering) |
+| `precio_unitario` | precio cobrado por unidad |
+| `importe` | `cantidad × precio_unitario` |
+| `importe_neto` | el importe menos su parte del descuento de la propuesta (ver abajo) |
+| `es_aceptada` | 1 si la propuesta se aceptó, 0 si no: sumarla cuenta ventas |
 
-## Base operacional vs. data warehouse
+**Dimensiones degeneradas**: `id_propuesta` y `motivo_rechazo` quedan en el hecho sin tabla propia.
+`id_propuesta` sirve para contar propuestas, y el motivo es un texto que no tiene otros atributos.
 
-| | Base del sistema (`public`) | Data warehouse (`dw`) |
-|---|---|---|
-| Para qué | Operar: cargar, modificar, consultar un evento | Analizar: totales, tendencias, comparaciones |
-| Tipo | OLTP | OLAP |
-| Modelo | Normalizado (3FN), muchas tablas chicas | Estrella: hechos al centro, dimensiones alrededor |
-| Datos | Estado actual | Historia (por ejemplo, precios de lista de cada época) |
-| Escribe | El sistema, todo el tiempo | Solo el ETL, una vez por día |
-| Consultas | Cortas, por id | Grandes, agregando miles de filas |
+**El descuento.** En la operativa el descuento es de la propuesta entera, no de cada ítem. Para que
+las ventas sumen bien, la carga lo reparte entre los ítems en proporción a su importe:
+`importe_neto = importe × total con descuento / subtotal`. Así, sumando el `importe_neto` de los
+ítems de una propuesta se obtiene exactamente su total (el paso 5 lo comprueba).
 
-El warehouse vive en el **esquema `dw` de la misma base de PostgreSQL**. Así el ETL lee con SQL
-directo (sin copiar archivos entre servidores) y no hace falta otro contenedor ni más memoria en el
-VPS. Como el sistema y los análisis no comparten tablas, las consultas pesadas no bloquean a nadie.
+## Paso 3 · Tablas (modelo estrella)
 
-## Modelo estrella
-
-```mermaid
-erDiagram
-    dim_tiempo ||--o{ fact_eventos : "fecha del evento / de la solicitud"
-    dim_empresa ||--o{ fact_eventos : ""
-    dim_cliente ||--o{ fact_eventos : ""
-    dim_tipo_evento ||--o{ fact_eventos : ""
-    dim_sede ||--o{ fact_eventos : ""
-    dim_estado_evento ||--o{ fact_eventos : ""
-
-    dim_tiempo ||--o{ fact_propuestas : "presentación / respuesta"
-    dim_empresa ||--o{ fact_propuestas : ""
-    dim_cliente ||--o{ fact_propuestas : ""
-    dim_tipo_evento ||--o{ fact_propuestas : ""
-
-    dim_tiempo ||--o{ fact_servicios_cotizados : "fecha del evento"
-    dim_servicio ||--o{ fact_servicios_cotizados : "versión vigente"
-    dim_proveedor ||--o{ fact_servicios_cotizados : "quién lo resolvió"
-    dim_empresa ||--o{ fact_servicios_cotizados : ""
-    dim_cliente ||--o{ fact_servicios_cotizados : ""
-    dim_tipo_evento ||--o{ fact_servicios_cotizados : ""
-
-    dim_tiempo ||--o{ fact_invitados : "respuesta / evento"
-    dim_empresa ||--o{ fact_invitados : ""
-    dim_cliente ||--o{ fact_invitados : ""
-    dim_tipo_evento ||--o{ fact_invitados : ""
-
-    fact_eventos {
-        int id_evento PK
-        int cantidad_estimada
-        int dias_anticipacion
-        numeric ocupacion_sede_pct
-        numeric importe_aceptado
-        int tareas_atrasadas
-        int invitados_confirmados
-    }
-    fact_propuestas {
-        int id_propuesta PK
-        varchar estado
-        text motivo_rechazo
-        numeric total
-        numeric total_por_persona
-        int dias_hasta_respuesta
-    }
-    fact_servicios_cotizados {
-        int id_item PK
-        int cantidad
-        numeric importe
-        numeric importe_lista
-        smallint es_vendido
-    }
-    fact_invitados {
-        int id_invitado PK
-        varchar medio_pago
-        smallint asiste
-        numeric importe
-        numeric importe_verificado
-    }
+```
+                         dim_tiempo
+                              │
+     dim_cliente ──┐          │          ┌── dim_servicio
+                   ├──── fact_ventas ────┤
+  dim_tipo_evento ─┘          │          └── dim_estado_propuesta
+                              │
+                         dim_empresa
 ```
 
-Son cuatro estrellas que comparten dimensiones (una **constelación**, o *esquema de galaxia*): por
-ejemplo, `dim_tiempo` y `dim_cliente` sirven igual para eventos, propuestas e invitados, así que se
-pueden comparar entre sí.
+- Cada dimensión tiene una **clave sustituta** propia del DW (`sk_*`, numérica) y guarda la clave de
+  la operativa (`id_*`) para poder cruzarlas en la carga.
+- `dim_tiempo` usa como clave la fecha en formato `AAAAMMDD` (`20261113`): se lee fácil y ordena bien.
+- `fact_ventas` tiene una FK a cada dimensión y las medidas. Es lo único que crece.
 
-### Hechos: qué se mide y con qué grano
+## Paso 4 · Carga (primero dimensiones, después hechos)
 
-El **grano** es qué representa cada fila. Definirlo primero evita sumar dos veces lo mismo.
+`CALL cargar_dw();` hace, en este orden:
 
-| Tabla de hechos | Grano (una fila por…) | Medidas principales |
-|---|---|---|
-| `fact_eventos` | evento (solicitud) | personas, días de anticipación, ocupación del salón, importe vendido, tareas atrasadas, invitados confirmados |
-| `fact_propuestas` | propuesta | subtotal, descuento, total, total por persona, días hasta la respuesta, aceptada/rechazada |
-| `fact_servicios_cotizados` | ítem de una propuesta | cantidad, precio cobrado, importe, importe a precio de lista, vendido |
-| `fact_invitados` | respuesta de un invitado | asiste, medio de pago, importe a cobrar, importe verificado |
+1. **Vacía** el DW: primero el hecho y después las dimensiones, porque el hecho apunta a ellas.
+2. **Carga las dimensiones** con `INSERT … SELECT` desde `operativa.*`, traduciendo códigos a textos
+   (`centro_estudiantes` → *Centro de estudiantes*). `dim_tiempo` se genera con un día por cada
+   fecha entre el primer y el último evento, y `dim_estado_propuesta` lleva los 5 estados fijos.
+3. **Carga el hecho**: un `INSERT … SELECT` que recorre los ítems de propuesta y hace un `JOIN` con
+   cada dimensión para cambiar las claves de la operativa (`id_*`) por las del DW (`sk_*`).
 
-Las banderas (`es_aceptada`, `asiste`, `es_vendido`…) son 0/1 para poder **sumarlas**: `SUM(asiste)`
-es la cantidad de asistentes. Datos como `estado`, `motivo_rechazo` o `medio_pago` quedan en el hecho
-como **dimensiones degeneradas** (no justifican una tabla propia).
+Las dimensiones van primero porque el hecho guarda sus claves: si no existieran todavía, no habría
+a qué apuntar (y las FK lo impedirían).
 
-### Dimensiones
+## Paso 5 · Verificación y respuestas
 
-| Dimensión | Atributos para agrupar | Cómo se actualiza |
-|---|---|---|
-| `dim_tiempo` | año, semestre, trimestre, mes, semana, día de la semana, fin de semana, **temporada escolar** | Se genera (2020-2030 y lo que haga falta) |
-| `dim_empresa` | organizadora, tipo de cuenta (prueba gratuita / sin límite) | SCD tipo 1 |
-| `dim_cliente` | centro, tipo, institución | SCD tipo 1 |
-| `dim_tipo_evento` | egresados, bienvenida… | SCD tipo 1 |
-| `dim_sede` | salón, capacidad, rango de capacidad | SCD tipo 1 |
-| `dim_proveedor` | proveedor, o *Equipo propio* / *Sin asignar* | SCD tipo 1 |
-| `dim_servicio` | servicio, precio de lista, **vigencia** | **SCD tipo 2** |
-| `dim_estado_evento` | estado y **etapa del embudo** (en curso, ganado, perdido) | Fija |
+`03-verificacion.sql` calcula lo mismo en la operativa y en el DW, y marca ✅ si coincide:
 
-- **Claves sustitutas** (`sk_*`): el warehouse usa sus propias claves. La de la base del sistema
-  queda como `id_*` (clave natural). Eso permite tener varias versiones de un mismo servicio.
-- **Miembros especiales**: `0 = Sin dato` (un evento sin salón) y `-1 = Equipo propio` en
-  proveedores. Así las FK nunca son NULL y los análisis no pierden filas.
-- **`dim_tiempo` usa `AAAAMMDD` como clave** (`20261113`): se lee fácil y ordena bien.
-- **SCD tipo 2 en servicios**: el sistema solo guarda el precio de lista *actual*. Cada vez que
-  cambia, el ETL cierra la versión vigente (`vigente_hasta`) y abre otra. Cada ítem cotizado apunta a
-  la versión vigente cuando se presentó la propuesta, así se puede comparar lo cobrado contra la lista
-  de ese momento (`importe_lista`). La historia arranca cuando se instala el warehouse: la primera
-  versión vale "desde siempre".
+| Control | Qué demuestra |
+|---|---|
+| Ítems de propuestas = filas del hecho | no se perdió ni se duplicó ninguna fila |
+| Propuestas con ítems / propuestas aceptadas | los JOIN con las dimensiones no dejaron afuera nada |
+| Importe cotizado | los importes se copiaron bien |
+| Total vendido con descuento | el reparto del descuento es correcto |
+| Unidades vendidas | las cantidades se copiaron bien |
+| Clientes y servicios | las dimensiones están completas |
 
-## ETL
+Además lista las propuestas cuyo total no coincide (tiene que salir vacía).
 
-`CALL dw.cargar();` hace todo en una sola transacción:
+`04-consultas.sql` responde las 4 preguntas del paso 1:
 
-1. **Extrae** de las tablas del sistema (`public.*`).
-2. **Transforma**: traduce códigos a nombres (`centro_estudiantes` → *Centro de estudiantes*),
-   calcula totales y medidas derivadas (días hasta la respuesta, ocupación, atrasos), asigna la
-   temporada, busca la versión del servicio vigente y resuelve quién dio cada servicio.
-3. **Carga**: las dimensiones se actualizan (upsert, sus claves no cambian entre corridas) y los
-   hechos se recalculan completos (con este volumen tarda ~1 segundo y un evento que cambió de estado
-   queda bien sin lógica incremental).
+| Pregunta | Cómo |
+|---|---|
+| 1. Ventas por mes y tipo de evento | `GROUP BY ROLLUP`: suma por mes y tipo, con subtotal por mes y total general |
+| 2. Porcentaje de aceptación | aceptadas ÷ propuestas con resultado, por año y tipo de evento |
+| 3. Motivos de pérdida | propuestas perdidas por motivo, con su importe y porcentaje (`SUM() OVER ()`) |
+| 4. Servicios más vendidos | ranking por año con `RANK() OVER (PARTITION BY anio …)` |
 
-Cada corrida queda en `dw.etl_ejecuciones` (inicio, fin, filas por tabla o el error). Si algo falla,
-no se carga nada a medias.
+## Paso 6 · Procedimiento almacenado
 
-```sql
-SELECT id_ejecucion, estado, fin - inicio AS duracion, filas, error
-  FROM dw.etl_ejecuciones ORDER BY id_ejecucion DESC LIMIT 5;
-```
+Toda la carga está en el procedimiento **`cargar_dw()`** (PL/pgSQL). Se puede repetir cuantas
+veces haga falta (por ejemplo, todas las noches): cada vez vacía el DW y lo vuelve a armar con los
+datos actuales. Todo corre en una transacción, así que si algo falla el DW queda como estaba.
 
-## Cómo usarlo
+## Cómo correrlo (demo local)
 
-**En el VPS** (`intermaterias-infra/produccion`): el ETL corre todas las noches por cron.
+Con el sistema levantado (`intermaterias-infra`, `docker compose up -d`). Si Docker dice
+*Cannot connect to the Docker daemon*, antes: `docker context use default`.
 
 ```bash
-bash scripts/etl.sh                 # instala el warehouse si falta y lo carga
-bash scripts/etl.sh --datos-demo    # además carga la empresa de demostración
-bash scripts/etl.sh --reinstalar    # borra dw y lo vuelve a crear (se pierde la historia de precios)
-docker compose exec postgres psql -U eventos eventos   # y adentro: SELECT * FROM dw.v_embudo;
+cd ~/Escritorio/Intermaterias/intermaterias-infra
+DW=../intermaterias-backend/database/warehouse
+psql_en() { docker compose exec -T postgres psql -U postgres -d "$1"; }
+
+# Una vez: crear la base, las tablas y el procedimiento
+psql_en eventos    < $DW/00-crear-base.sql
+psql_en eventos_dw < $DW/01-esquema.sql
+psql_en eventos_dw < $DW/02-carga.sql
+
+# Opcional: datos de prueba (~3 años) en la operativa
+psql_en eventos    < $DW/datos-historicos.sql
+
+# Cargar, verificar y responder
+echo "CALL cargar_dw();" | psql_en eventos_dw
+psql_en eventos_dw < $DW/03-verificacion.sql
+psql_en eventos_dw < $DW/04-consultas.sql
 ```
 
-**En la demo local** (`intermaterias-infra`, con el stack levantado):
-
-```bash
-cd intermaterias-backend/database/warehouse
-for f in 01-esquema.sql 02-etl.sql 03-vistas.sql; do
-  docker compose -f ../../../intermaterias-infra/docker-compose.yml exec -T postgres \
-    psql -U postgres -d eventos < $f
-done
-# opcional: datos-historicos.sql, después:  CALL dw.cargar();
-```
-
-## Preguntas que responde
-
-| Pregunta | Dónde |
-|---|---|
-| ¿Cuánto se factura por mes? ¿Cuánto creció respecto del mes anterior? | `v_ventas_mensuales`, consultas 1 y 6 |
-| ¿En qué temporada se concentra cada tipo de evento? | `v_temporadas`, consulta 2 (CUBE) |
-| ¿Qué porcentaje de las solicitudes se gana? ¿Por qué se pierden? | `v_embudo`, `v_propuestas`, consulta 10 |
-| ¿Qué servicios se venden más? ¿Se cobra por encima o por debajo de la lista? | `v_servicios`, consultas 7 y 9 |
-| ¿Con qué proveedores se trabaja más? ¿Cuánto se resuelve con equipo propio? | `v_proveedores` |
-| ¿Qué clientes concentran la facturación? | consulta 8 (Pareto) |
-| ¿Qué asistencia hay? ¿Se paga en efectivo o por transferencia? ¿Cuánto falta cobrar? | `v_invitados`, consulta 11 |
-| ¿Se aprovechan los salones? | consulta 4 (ocupación por sede) |
-
-Todas las vistas incluyen la empresa: cada organizadora puede ver solo lo suyo
-(`WHERE empresa = '…'`), y como dueños del sistema se ve el total.
+Para explorar a mano: `docker compose exec postgres psql -U postgres eventos_dw` y, adentro,
+`\dt` (tablas del DW), `\det operativa.*` (tablas foráneas) o cualquier consulta.

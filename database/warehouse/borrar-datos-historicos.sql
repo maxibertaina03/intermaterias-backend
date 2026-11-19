@@ -1,5 +1,5 @@
 -- Saca la empresa "Eventos Históricos (demo)" y todos sus datos de las tablas del sistema.
--- Después: CALL dw.cargar(); para que el warehouse deje de mostrarlos.
+-- Se corre en la base operativa (eventos). Después, en eventos_dw: CALL cargar_dw();
 BEGIN;
 CREATE TEMP TABLE e ON COMMIT DROP AS SELECT id_empresa FROM empresas WHERE nombre = 'Eventos Históricos (demo)';
 DELETE FROM invitados WHERE id_invitacion IN (SELECT id_invitacion FROM invitaciones WHERE id_empresa IN (SELECT * FROM e));
