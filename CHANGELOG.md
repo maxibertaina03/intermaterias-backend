@@ -7,6 +7,17 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.5.1] - 2026-11-20
+
+Datos de prueba de 6 meses y guía en PDF del data warehouse.
+
+### Agregado
+- `database/warehouse/Guia-Data-Warehouse.pdf`: guía para estudiar el data warehouse (conceptos, los 6 pasos con el SQL, resultados reales y preguntas del profe con sus respuestas).
+
+### Cambiado
+- `04-consultas.sql`: la fila del total general de la pregunta 1 se llama *Total general* (con `GROUPING()`).
+- Datos de prueba del data warehouse: `datos-de-prueba.sql` simula **6 meses de trabajo de "Eventos del Centro"** (16 centros, ~95 solicitudes con propuestas, servicios, tareas, cambios e invitados), con fechas relativas al día en que se corre, y se ve también en el sistema. `borrar-datos-de-prueba.sql` lo saca. Reemplaza a la empresa de demostración de 3 años (`datos-historicos.sql`).
+
 ## [2.5.0] - 2026-11-19
 
 Data warehouse según la consigna de Base de Datos: base aparte (eventos_dw), un proceso de negocio con 4 preguntas, carga en un procedimiento y verificación contra la operativa.
@@ -133,7 +144,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.1...develop
+[2.5.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.1...v2.3.0

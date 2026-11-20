@@ -2,6 +2,8 @@
 
 Base de datos analítica del sistema de eventos, armada siguiendo los 6 pasos de la consigna.
 
+📄 **Guía para estudiar** (con conceptos, el SQL explicado, resultados y preguntas del profe): [Guia-Data-Warehouse.pdf](Guia-Data-Warehouse.pdf)
+
 | Archivo | Paso | Se corre en |
 |---|---|---|
 | `00-crear-base.sql` | Crea la base `eventos_dw` | `eventos` (una vez) |
@@ -9,8 +11,8 @@ Base de datos analítica del sistema de eventos, armada siguiendo los 6 pasos de
 | `02-carga.sql` | 4 y 6. Procedimiento `cargar_dw()`: carga dimensiones y después hechos | `eventos_dw` |
 | `03-verificacion.sql` | 5. Totales del DW contra la base operativa | `eventos_dw` |
 | `04-consultas.sql` | 5. Las 4 preguntas de negocio | `eventos_dw` |
-| `datos-historicos.sql` | Opcional: ~3 años de datos de prueba en la operativa | `eventos` |
-| `borrar-datos-historicos.sql` | Saca esos datos de prueba | `eventos` |
+| `datos-de-prueba.sql` | Opcional: 6 meses de trabajo de "Eventos del Centro" (~95 solicitudes) | `eventos` |
+| `borrar-datos-de-prueba.sql` | Saca esos datos de prueba | `eventos` |
 
 ## Dos bases en el mismo servidor
 
@@ -166,8 +168,8 @@ psql_en eventos    < $DW/00-crear-base.sql
 psql_en eventos_dw < $DW/01-esquema.sql
 psql_en eventos_dw < $DW/02-carga.sql
 
-# Opcional: datos de prueba (~3 años) en la operativa
-psql_en eventos    < $DW/datos-historicos.sql
+# Opcional: 6 meses de trabajo de "Eventos del Centro" en la operativa
+psql_en eventos    < $DW/datos-de-prueba.sql
 
 # Cargar, verificar y responder
 echo "CALL cargar_dw();" | psql_en eventos_dw
@@ -177,3 +179,20 @@ psql_en eventos_dw < $DW/04-consultas.sql
 
 Para explorar a mano: `docker compose exec postgres psql -U postgres eventos_dw` y, adentro,
 `\dt` (tablas del DW), `\det operativa.*` (tablas foráneas) o cualquier consulta.
+
+## Datos de prueba
+
+`datos-de-prueba.sql` simula **6 meses de trabajo** de "Eventos del Centro" (la empresa con la que
+se entra al sistema con `sofia`, `masita`, etc.), con fechas relativas al día en que se corre:
+
+- 16 centros de estudiantes nuevos, con su contacto (a algunos les cambió la presidencia).
+- ~95 solicitudes: egresados de octubre a diciembre, bienvenidas en marzo y abril, aniversarios en
+  cualquier momento. Las más nuevas todavía esperan respuesta.
+- Propuestas aceptadas, rechazadas (con motivo) y vencidas; ~30 % con descuento; precios con
+  inflación de ~2,5 % por mes.
+- Servicios asignados a proveedores (o al equipo propio), tareas del equipo, cambios pedidos por
+  los centros e invitados con su medio de pago.
+
+Se ve tanto en el sistema como en el DW (después de `CALL cargar_dw();`). Siempre genera lo mismo,
+no se carga dos veces y `borrar-datos-de-prueba.sql` lo saca.
+
