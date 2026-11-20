@@ -7,6 +7,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.5.2] - 2026-11-20
+
+Las preguntas del data warehouse quedan como vistas, y la guía explica cómo verlo en pgAdmin.
+
+### Cambiado
+- Data warehouse: cada pregunta de negocio queda guardada como una vista en `eventos_dw` (`pregunta_1_ventas_por_mes` … `pregunta_4_servicios_mas_vendidos`), para mostrarlas fácil (por ejemplo, en pgAdmin). README con cómo verlo en pgAdmin.
+
 ## [2.5.1] - 2026-11-20
 
 Datos de prueba de 6 meses y guía en PDF del data warehouse.
@@ -144,7 +151,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.1...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.2...develop
+[2.5.2]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.3.0...v2.4.0

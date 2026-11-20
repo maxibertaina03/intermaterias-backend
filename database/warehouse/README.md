@@ -10,7 +10,7 @@ Base de datos analítica del sistema de eventos, armada siguiendo los 6 pasos de
 | `01-esquema.sql` | 3. Tablas de dimensiones y de hechos (y la conexión con la operativa) | `eventos_dw` |
 | `02-carga.sql` | 4 y 6. Procedimiento `cargar_dw()`: carga dimensiones y después hechos | `eventos_dw` |
 | `03-verificacion.sql` | 5. Totales del DW contra la base operativa | `eventos_dw` |
-| `04-consultas.sql` | 5. Las 4 preguntas de negocio | `eventos_dw` |
+| `04-consultas.sql` | 5. Las 4 preguntas de negocio, guardadas como vistas `pregunta_1_…` a `pregunta_4_…` | `eventos_dw` |
 | `datos-de-prueba.sql` | Opcional: 6 meses de trabajo de "Eventos del Centro" (~95 solicitudes) | `eventos` |
 | `borrar-datos-de-prueba.sql` | Saca esos datos de prueba | `eventos` |
 
@@ -138,7 +138,10 @@ a qué apuntar (y las FK lo impedirían).
 
 Además lista las propuestas cuyo total no coincide (tiene que salir vacía).
 
-`04-consultas.sql` responde las 4 preguntas del paso 1:
+`04-consultas.sql` responde las 4 preguntas del paso 1. Cada una queda guardada como una **vista**
+con su nombre (`pregunta_1_ventas_por_mes`, `pregunta_2_aceptacion`, `pregunta_3_motivos_de_perdida`,
+`pregunta_4_servicios_mas_vendidos`): después de cada `CALL cargar_dw();` ya muestran los datos nuevos,
+y en pgAdmin se abren con *View/Edit Data*.
 
 | Pregunta | Cómo |
 |---|---|
@@ -179,6 +182,13 @@ psql_en eventos_dw < $DW/04-consultas.sql
 
 Para explorar a mano: `docker compose exec postgres psql -U postgres eventos_dw` y, adentro,
 `\dt` (tablas del DW), `\det operativa.*` (tablas foráneas) o cualquier consulta.
+
+**Con pgAdmin (visual).** En `intermaterias-infra`: `docker compose --profile herramientas up -d pgadmin`
+y abrir http://localhost:5050 (entra directo, la conexión ya está configurada). En el árbol:
+*Intermaterias → PostgreSQL del proyecto → Databases → eventos_dw → Schemas → public* están las
+**Tables** (dimensiones y hecho), las **Views** (una por pregunta) y **Procedures** (`cargar_dw`).
+Para cargar: clic derecho en `eventos_dw` → *Query Tool* → `CALL cargar_dw();` → ▶.
+Para el diagrama del modelo estrella: clic derecho en `eventos_dw` → *ERD For Database*.
 
 ## Datos de prueba
 
