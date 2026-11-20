@@ -7,6 +7,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+### Cambiado
+- Data warehouse: cada pregunta de negocio queda guardada como una vista en `eventos_dw` (`pregunta_1_ventas_por_mes` … `pregunta_4_servicios_mas_vendidos`), para mostrarlas fácil (por ejemplo, en pgAdmin). README con cómo verlo en pgAdmin.
+
 ## [2.5.1] - 2026-11-20
 
 Datos de prueba de 6 meses y guía en PDF del data warehouse.
