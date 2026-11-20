@@ -7,6 +7,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+## [2.5.1] - 2026-11-20
+
+Datos de prueba de 6 meses y guía en PDF del data warehouse.
+
 ### Agregado
 - `database/warehouse/Guia-Data-Warehouse.pdf`: guía para estudiar el data warehouse (conceptos, los 6 pasos con el SQL, resultados reales y preguntas del profe con sus respuestas).
 
@@ -140,7 +144,8 @@ Primera versión completa: el recorrido de un evento, desde la solicitud hasta e
 - CRUD de empresas conectado a PostgreSQL en Neon.
 - CORS limitado al front (`FRONTEND_URL`).
 
-[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.0...develop
+[Sin publicar]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.1...develop
+[2.5.1]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/maxibertaina03/intermaterias-backend/compare/v2.2.1...v2.3.0
