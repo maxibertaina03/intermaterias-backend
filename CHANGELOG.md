@@ -7,6 +7,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [Sin publicar]
 
+### Agregado
+- `database/warehouse/Guia-Data-Warehouse.pdf`: guía para estudiar el data warehouse (conceptos, los 6 pasos con el SQL, resultados reales y preguntas del profe con sus respuestas).
+
+### Cambiado
+- `04-consultas.sql`: la fila del total general de la pregunta 1 se llama *Total general* (con `GROUPING()`).
+- Datos de prueba del data warehouse: `datos-de-prueba.sql` simula **6 meses de trabajo de "Eventos del Centro"** (16 centros, ~95 solicitudes con propuestas, servicios, tareas, cambios e invitados), con fechas relativas al día en que se corre, y se ve también en el sistema. `borrar-datos-de-prueba.sql` lo saca. Reemplaza a la empresa de demostración de 3 años (`datos-historicos.sql`).
+
 ## [2.5.0] - 2026-11-19
 
 Data warehouse según la consigna de Base de Datos: base aparte (eventos_dw), un proceso de negocio con 4 preguntas, carga en un procedimiento y verificación contra la operativa.

@@ -7,8 +7,11 @@
 -- PREGUNTA 1. ¿Cuánto se vende por mes y por tipo de evento?
 --   Ventas = propuestas aceptadas, con el descuento ya aplicado. ROLLUP agrega el subtotal de
 --   cada mes (tipo de evento vacío) y el total general (todo vacío).
+--   GROUPING(col) vale 1 en las filas de subtotal de esa columna: sirve para ponerles nombre.
 SELECT COALESCE(t.anio_mes, 'TOTAL')    AS mes,
-       COALESCE(te.nombre, '· Total del mes') AS tipo_evento,
+       CASE WHEN GROUPING(t.anio_mes) = 1 THEN '· Total general'
+            WHEN GROUPING(te.nombre) = 1  THEN '· Total del mes'
+            ELSE te.nombre END           AS tipo_evento,
        COUNT(DISTINCT f.id_propuesta)    AS eventos_vendidos,
        ROUND(SUM(f.importe_neto), 2)     AS ventas
   FROM fact_ventas f
